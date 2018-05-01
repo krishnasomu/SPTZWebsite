@@ -1,0 +1,267 @@
+$(document).ready(function(){
+  if($("#frmServiceRequest").hasClass("genericForm")) {
+    FBSM.W.servicePath = 'Services/WidgetServices.aspx';
+    $("#txtSrvCountry").change(function() {
+      if($("#txtSrvCountry").val()!="") {
+        $.get(FBSM.W.servicePath, { action: "getregions", countryName: $("#txtSrvCountry").val() }, function(data) {
+          $("#txtSrvRegion").html(data);
+        });
+      }
+    });
+    $("#btnSrvSubmit1").click(function() {
+      var collection = $("#frmServiceRequest input, #frmServiceRequest textarea, #frmServiceRequest select");
+      var labels = {
+        "txtSrvFirstName": "firstName",
+        "txtSrvLastName": "lastName",
+        "txtSrvAddress": "address",
+        "txtSrvCity": "city",
+        "txtSrvRegion": "region",
+        "txtSrvCountry": "country",
+        "txtSrvPostalCode": "postalCode",
+        "txtSrvPhone": "phone",
+        "txtSrvEmail": "email",
+        "txtSrvNeeded": "needed",
+        "txtSrvCaptcha": "captchaInput",
+        "txtSrvCaptchaPrefix": "captchaPrefix",
+        "ddLocation": "location",
+        "txtSrvReferrer":"HTTP_REFERER"
+      };
+      var resets = ["txtSrvFirstName","txtSrvLastName","txtSrvAddress","txtSrvCity","txtSrvRegion","txtSrvCountry","txtSrvPostalCode","txtSrvPhone","txtSrvEmail","txtSrvNeeded","txtSrvCaptcha","ddLocation"];
+      var receiveOffers = $("#receiveOffers").is(":checked");
+      $("#loadingMsg").dialog("open");
+      $.ajax({
+        type: "POST",
+        url: FBSM.W.servicePath,
+        data: "action=servicerequest&" + FBSM.C.buildPostData(collection, labels) + "&receiveOffers="+receiveOffers,
+        dataType: "xml",
+        contentType: "application/x-www-form-urlencoded",
+        success: function(res) {
+          $("#loadingMsg").dialog("close");
+          if(FBSM.C.buildXmlPopupMessage(res, collection, resets)) {
+            FBSM.C.loadCustomJavascriptParametersFromSource('s.linkTrackVars="events,eVar7,eVar37,prop27";s.linkTrackEvents="event5";s.events="event5";s.eVar7="Lead: Service Quote Request";s.prop27={@siteId};s.eVar37=s.prop27;');
+            FBSM.C.getAssetAdwords($("response", res), $("#loadingMsg"),'');
+          }
+          FBSM.C.captchaRefresh('srv_captchaImage');
+          $("#receiveOffers").checked = false;
+        },
+        error: function(a, b, c) {
+          $("#loadingMsg").dialog("close");
+          FBSM.C.captchaRefresh('srv_captchaImage');
+        }
+      });
+    });
+  }
+
+	if($("#frmCPAPRequest").length > 0) {
+    $('#loadingMsg').dialog(FBSM.C.loadingDialogOptions('#loadingMsg'));
+    FBSM.W.servicePath = 'Services/WidgetServices.aspx';
+    $("#txtCPAPCountry").change(function() {
+      if($("#txtCPAPCountry").val()!="") {
+        $.get(FBSM.W.servicePath, { action: "getregions", countryName: $("#txtCPAPCountry").val() }, function(data) {
+          $("#txtCPAPRegion").html(data);
+        });
+      }
+    });
+    $("#btnCPAPSubmit1").click(function() {
+      var collection = $("#frmCPAPRequest input, #frmCPAPRequest textarea, #frmCPAPRequest select");
+      var labels = {
+        "txtCPAPFirstName": "firstName",
+        "txtCPAPLastName": "lastName",
+        "txtCPAPAddress": "address",
+        "txtCPAPCity": "city",
+        "txtCPAPRegion": "region",
+        "txtCPAPCountry": "country",
+        "txtCPAPPostalCode": "postalCode",
+        "txtCPAPPhone": "phone",
+        "txtCPAPEmail": "email",
+        "txtCPAPComments": "comments",
+        "ddLocation": "location",
+        "txtCPAPCaptcha": "captchaInput",
+        "txtCPAPCaptchaPrefix": "captchaPrefix",
+        "txtCPAPReferrer":"HTTP_REFERER"
+      };
+      var resets = ["txtCPAPFirstName","txtCPAPLastName","txtCPAPAddress","txtCPAPCity","txtCPAPRegion","txtCPAPCountry","txtCPAPPostalCode","txtCPAPPhone","txtCPAPEmail","txtCPAPComments","txtCPAPCaptcha","ddLocation"];
+      var data = "";
+      var param = "";
+      $("fieldset", "#CPAPRequest_Schedule").each(function(){
+        param = "";
+        if(typeof($(this).attr("data-section-name"))!="undefined") {
+          $(this).find("input:checked").each(function(){
+            if(param!="") param += ", ";
+            param += $(this).val();
+          });
+          if(data!="") data += "&";
+          data += $(this).attr("data-section-name") + "=" + param;
+        }
+      });         
+      if($("#chkCPAPProtect").prop("checked")) {
+        if(data!="") data += "&";
+        data += "protectMyHealth=1";
+      }
+      var receiveOffers = $("#receiveOffers").is(":checked").toString();
+      if(data!="") {
+        data += "&receiveOffers="+receiveOffers;
+      }
+      $("#loadingMsg").dialog("open");
+      $.ajax({
+        type: "POST",
+        url: FBSM.W.servicePath,
+        data: "action=cpaprequest&" + FBSM.C.buildPostData(collection, labels) + "&" + data,
+        dataType: "xml",
+        contentType: "application/x-www-form-urlencoded",
+        success: function(res) {
+          $("#loadingMsg").dialog("close");
+          if(FBSM.C.buildXmlPopupMessage(res, collection, resets)) {
+            $("input:checked", "#frmCPAPRequest").prop("checked", false);
+          }
+          FBSM.C.captchaRefresh('CPAP_captchaImage');
+          $("#receiveOffers").checked = "unchecked";
+        },
+        error: function(a, b, c) {
+          $("#loadingMsg").dialog("close");
+          FBSM.C.captchaRefresh('CPAP_captchaImage');
+        }
+      });
+    });
+  }
+
+  if($("#frmRxRequest").length > 0) {
+    $('#loadingMsg').dialog(FBSM.C.loadingDialogOptions('#loadingMsg'));
+    FBSM.W.servicePath = 'Services/WidgetServices.aspx';
+    $("#txtRXCountry").change(function() {
+      if($("#txtRXCountry").val()!="") {
+        $.get(FBSM.W.servicePath, { action: "getregions", countryName: $("#txtRXCountry").val() }, function(data) {
+          $("#txtRXRegion").html(data);
+        });
+      }
+    });
+    $("#btnRXSubmit1").click(function() {
+      var collection = $("#frmRxRequest input, #frmRxRequest textarea, #frmRxRequest select");
+      var labels = {
+        "txtRXFirstName": "firstName",
+        "txtRXLastName": "lastName",
+        "txtRXAddress": "address",
+        "txtRXCity": "city",
+        "txtRXRegion": "region",
+        "txtRXCountry": "country",
+        "txtRXPostalCode": "postalCode",
+        "txtRXPhone": "phone",
+        "txtRXEmail": "email",
+        "txtRXPrescription1": "prescription1",
+        "txtRXPrescription2": "prescription2",
+        "txtRXPrescription3": "prescription3",
+        "txtRXPrescription4": "prescription4",
+        "txtRXComments": "comments",
+        "txtRXCaptcha": "captchaInput",
+        "txtRXCaptchaPrefix": "captchaPrefix",
+        "txtRXReferrer":"HTTP_REFERER"
+      };
+      var resets = ["txtRXFirstName","txtRXLastName","txtRXAddress","txtRXCity","txtRXRegion","txtRXCountry","txtRXPostalCode","txtRXPhone","txtRXEmail","txtRXPrescription1","txtRXPrescription2","txtRXPrescription3","txtRXPrescription4","txtRXComments","txtRXCaptcha"];
+      var receiveOffers = $("#receiveOffers").is(":checked").toString();
+      $("#loadingMsg").dialog("open");
+      $.ajax({
+        type: "POST",
+        url: FBSM.W.servicePath,
+        data: "action=rxrequest&" + FBSM.C.buildPostData(collection, labels) + "&receiveOffers=" + receiveOffers,
+        dataType: "xml",
+        contentType: "application/x-www-form-urlencoded",
+        success: function(res) {
+          $("#loadingMsg").dialog("close");
+          FBSM.C.buildXmlPopupMessage(res, collection, resets);
+          FBSM.C.captchaRefresh('RX_captchaImage');
+        },
+        error: function(a, b, c) {
+          $("#loadingMsg").dialog("close");
+          FBSM.C.captchaRefresh('RX_captchaImage');
+        }
+      });
+    });
+  }
+
+  if ($("#frmValueYourTrade").length > 0) {
+  	$('#loadingMsg').dialog(FBSM.C.loadingDialogOptions('#loadingMsg'));
+  	FBSM.W.servicePath = 'Services/WidgetServices.aspx';
+  	$("#btnValueYourTradeSubmit").click(function () {
+  		var collection = $("#frmValueYourTrade input, #frmValueYourTrade textarea, #frmValueYourTrade select");
+  		var labels = {
+  			"ddLocation": "vyt_cmbLocations",
+  			"txtVYTFirstName": "vyt_txtFirstName",
+  			"txtVYTLastName": "vyt_txtLastName",
+  			"txtVYTPhone": "vyt_txtDayPhone",
+  			"txtVYTEmail": "vyt_txtEmail",
+  			"txtVYTInterestedYear": "vyt_txtInterestedYear",
+  			"txtVYTInterestedModel": "vyt_txtInterestedModel",
+  			"txtVYTInterestedMake": "vyt_txtInterestedMake",
+  			"txtVYTYourYear": "vyt_txtYourYear",
+  			"txtVYTYourModel": "vyt_txtYourModel",
+  			"txtVYTYourMake": "vyt_txtYourMake",
+  			"txtVYTYourUsage": "vyt_txtYourUsage",
+  			"txtVYTYourAccessories": "vyt_txtAccessories",
+  			"txtVYTYourComments": "vyt_txtComments",
+  			"txtVYTReferrer": "HTTP_REFERER"
+  		};
+  		var resets = ["txtVYTFirstName", "txtVYTLastName", "txtVYTPhone", "txtVYTEmail", "txtVYTInterestedYear", "txtVYTInterestedModel", "txtVYTInterestedMake", "txtVYTYourYear", "txtVYTYourModel", "txtVYTYourMake", "txtVYTYourUsage", "txtVYTYourAccessories", "receiveOffers", "txtVYTYourComments"];
+  		var receiveOffers = $("#receiveOffers").is(":checked").toString();
+  		$("#loadingMsg").dialog("open");
+  		$.ajax({
+  			type: "POST",
+  			url: FBSM.W.servicePath,
+  			data: "action=valueyourtraderequest&" + FBSM.C.buildPostData(collection, labels) + "&receiveOffers=" + receiveOffers,
+  			dataType: "xml",
+  			contentType: "application/x-www-form-urlencoded",
+  			success: function (res) {
+  				$("#loadingMsg").dialog("close");
+  				FBSM.C.buildXmlPopupMessage(res, collection, resets);
+  				FBSM.C.captchaRefresh('VYT_captchaImage');
+  				FBSM.C.getAssetAdwords('', '.ui-dialog', 'Value Your Trade Thank You');
+  			},
+  			error: function (a, b, c) {
+  				$("#loadingMsg").dialog("close");
+  				FBSM.C.captchaRefresh('VYT_captchaImage');
+  			}
+  		});
+  	});
+  }
+
+  if ($("#frmScheduleTestDrive").length > 0) {
+  	$('#loadingMsg').dialog(FBSM.C.loadingDialogOptions('#loadingMsg'));
+  	FBSM.W.servicePath = 'Services/WidgetServices.aspx';
+  	$('#std_txtDate').datepicker({
+  		defaultDate: 0,
+  		buttonImage: "../../assets/img/legacy/calendar.gif",
+  		showOn: "both",
+		minDate: 0
+  	}).datepicker('hide');
+  	$("#btnScheduleTestDriveSubmit").click(function () {
+  		var collection = $("#frmScheduleTestDrive input, #frmScheduleTestDrive textarea, #frmScheduleTestDrive select");
+  		var labels = {
+  			"ddLocation": "std_cmbLocations",
+  			"std_txtFirstName": "std_txtFirstName",
+  			"std_txtLastName": "std_txtLastName",
+  			"std_txtPhone": "std_txtPhone",
+  			"std_txtEmail": "std_txtEmail",
+  			"std_txtDate": "std_txtDate",
+			"std_txtVehicle": "std_txtVehicle",
+  			"std_txtReferrer": "HTTP_REFERER"
+  		};
+  		var resets = ["std_txtFirstName", "std_txtLastName", "std_txtPhone", "std_txtEmail", "std_txtVehicle"];
+  		var receiveOffers = $("#receiveOffers").is(":checked").toString();
+  		$("#loadingMsg").dialog("open");
+  		$.ajax({
+  			type: "POST",
+  			url: FBSM.W.servicePath,
+  			data: "action=scheduletestdriverequest&" + FBSM.C.buildPostData(collection, labels) + "&receiveOffers=" + receiveOffers,
+  			dataType: "xml",
+  			contentType: "application/x-www-form-urlencoded",
+  			success: function (res) {
+  				$("#loadingMsg").dialog("close");
+  				FBSM.C.buildXmlPopupMessage(res, collection, resets);
+  				FBSM.C.getAssetAdwords('', '.ui-dialog', 'Schedule Test Drive Thank You');
+  			},
+  			error: function (a, b, c) {
+  				$("#loadingMsg").dialog("close");
+  			}
+  		});
+  	});
+  }
+});

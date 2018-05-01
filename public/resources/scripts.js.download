@@ -1,0 +1,41 @@
+// ============== Waypoint Framework | Scripting ======================== //
+// Summary: This file executes all the scripting associated with Waypoint.
+// All other site scripting should be placed in this file as well.
+// 
+// If the script uses jQuery, it should be placed inside the document.ready
+// function, and after the Waypoint script calls.
+// ====================================================================== //
+
+// Uncomment to specify a custom loading icon class
+// FBSM.EZ.searchLoadingClass = "waypoint-custom-searchicon";
+
+// Uncomment to set the pallate alignment
+// FBSM.EZ.searchPallateAlignment = "right";
+
+$(document).ready(function(){
+
+	// Adds a scrolling function to the My Cart Widget
+	// waypoint.addCartWidgetScrolling();
+	
+	// Fixes clearing issues in p1 product groups.
+	$('.product-groups .product:nth-child(3n-2)').css({clear:'left'});
+
+	// Hides the left nav bar if there is only 1 item.
+	waypoint.autoHideSidebar();
+
+	// { hideFirstNavItem (bool) [, addLinkClass (bool)] }
+	waypoint.navEnhancements( true, false );
+
+	// Adds a focus class for the searchbar.
+	waypoint.addSearchFocus();
+
+	// Adds icon options for the shop navigation.
+	waypoint.cleanShopNav( 'left' );
+
+	// Swaps icons for the WIM header. Looks nicer.
+	waypoint.cleanWIMHeader();
+
+	// Removes the title from the Shop page if merch is present.
+	waypoint.cleanShopPage();
+
+});

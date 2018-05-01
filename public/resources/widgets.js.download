@@ -1,0 +1,710 @@
+FBSM.W.currentMiniPromoLogo = -1;
+FBSM.W.miniPromoLogos = [];
+// Recalculates how many list elements can fit into the unit scroller sections.
+// This fixes the case where the elements overflow into the sidebar area.
+FBSM.W.recalculateUnitScroller = function() {
+  var sectionWidth = $("div.home-inventory-scroller div.scrollsection").eq(0).width();
+  var divWidth = $("div.mainWidgetControl.unitscroller").width();
+  if (sectionWidth > divWidth) {
+    var exstingLis = $("div.home-inventory-scroller div.scrollsection li").clone();
+    var liWidth = $("div.home-inventory-scroller div.scrollsection li").eq(0).width();
+    var numLisThatFit = Math.floor(divWidth / liWidth);
+    $("div.home-inventory-scroller div.home-inventory-inner").html("");
+    var tempSection = $("<div class='scrollsection'></div>");
+    var tempList = $("<ul></ul>");
+    exstingLis.each(function(i, e) {
+      tempList.append($(this)[0]);
+      if ((i + 1) % numLisThatFit === 0 || (i + 1) == exstingLis.length) {
+        tempSection.append(tempList);
+        $("div.home-inventory-scroller div.home-inventory-inner").append(tempSection);
+        tempSection = $("<div class='scrollsection'></div>");
+        tempList = $("<ul></ul>");
+      }
+    });
+  }
+};
+FBSM.W.fitHeaderIcons = function() {
+  var $ul = $('div.has-icons').find('ul.linkList');
+  $ul.find("li").width((100 / $ul.find("li").length) + "%");
+};
+FBSM.W.swapMiniPromoLogo = function() {
+  if (FBSM.W.miniPromoLogos.length > 1) {
+    $('#miniPromo img').fadeOut(150);
+    FBSM.W.currentMiniPromoLogo = (FBSM.W.currentMiniPromoLogo + 1 < FBSM.W.miniPromoLogos.length) ? FBSM.W.currentMiniPromoLogo + 1 : 0;
+    var img = new Image();
+    var imgsrc = FBSM.W.miniPromoLogos[FBSM.W.currentMiniPromoLogo].imageUrl;
+    if (document.location.protocol == "https:") {
+      imgsrc = imgsrc.replace("http://images.endeavorsuite.com", "https://media.50below.com").replace("http://media.50below.com", "https://media.50below.com");
+    }
+    $(img).load(function() {
+      $(this).hide();
+      $('#miniPromo a').html(this);
+      $(this).fadeIn();
+      if (FBSM.W.miniPromoLogos.length > 0) minipromologos_interval = setTimeout('FBSM.W.swapMiniPromoLogo()', 6000);
+    }).attr('src', imgsrc).css('border', 0);
+  }
+};
+FBSM.W.swapMiniPromos = function(promoName) {
+  var promo = $.grep(FBSM.W.miniPromos, function(a) { return a.name == promoName; });
+  if (promo.length > 0) promo = promo[0];
+  if (promo.promos.length > 1) {
+    $('#miniBrandPromo img').fadeOut(150);
+    promo.current = (promo.current + 1 < promo.promos.length) ? promo.current + 1 : 0;
+    var img = new Image();
+    $(img).load(function() {
+      $(this).hide();
+      $('a', promo.elm).html(this).attr("href", "promotion-detail.htm?promoId=" + promo.promos[promo.current].id + "&fm=polw").attr("title", promo.promos[promo.current].name);
+      $(this).fadeIn();
+      if (promo.promos.length > 0) minipromos_interval = setTimeout('FBSM.W.swapMiniPromos("' + promo.name + '")', 6000);
+    }).attr('src', promo.promos[promo.current].imageUrl).width("100%").addClass('bc_ie_scale').css('border', 0).css("height", "auto");
+  }
+};
+
+FBSM.W.updateCartTotal = function(qty, total) {
+    $(".cart-widget-qty", "#pd-cartwidget-info").html(qty + "&nbsp;Item" + ((qty != 1) ? "s, &nbsp;" : ", &nbsp;"));
+    $(".cart-widget-price", "#pd-cartwidget-info").html(FBSM.W.formatPrice(total));
+    FBSM.W.buildShippingInfo(total);
+};
+FBSM.W.buildShippingInfo = function(total) {
+    var output = "";
+    //Build output json
+    if (FBSM.W.shippingJSON != null && typeof FBSM.W.shippingJSON != "undefined") {
+      var selectedMethod = "";
+      var selectedId = $("#pd-cartwidget-selectedMethod").val();
+        var methods = new Array();
+        var hasLimit = false;
+        total = parseFloat(total);
+        $.each(FBSM.W.shippingJSON, function(i, method) {
+            hasLimit = false;
+            $.each(method.limits, function(j, limit) {
+                if (limit.limit !== -1 && limit.limit >= total) {
+                    methods.push({ "id": method.id, "name": method.name, "rate": limit.price });
+                     if (method.isSelected) {
+                       selectedMethod = method.name;
+                       selectedId = method.id;
+                     }
+                    hasLimit = true;
+                    return false;
+                }
+            });
+            if (!hasLimit) {
+                $.each(method.limits, function(j, limit) {
+                  if (limit.limit === -1) {
+                        if (method.isSelected) {
+                          selectedMethod = method.name;
+                          selectedId = method.id;
+                        }
+                        methods.push({ "id": method.id, "name": method.name, "rate": limit.price });
+                        return false;
+                    }
+                });
+            }
+        });
+        methods.sort(function(a, b) {
+            if (a.rate === b.rate) return 0;
+            return (a.rate < b.rate) ? -1 : 1;
+        });
+        //Build html
+        
+        $.each(methods, function(i, method) {
+            output += "<div><label><input type='radio' name='select-shipping' value='" + FBSM.W.formatPrice(method.rate) + "' " + ((selectedId == method.id) ? "checked" : "") + " /><div><strong>" + FBSM.W.formatPrice(method.rate) + "</strong><br/>" + method.name + "</div><input type='hidden' class='select-shipping-id' value='" + method.id + "' /></label></div>";
+            if (method.id === selectedId) {
+                selectedMethod = FBSM.W.formatPrice(method.rate);
+            }
+        });
+        if (selectedMethod === "" && methods.length !== 0) {
+            selectedMethod = FBSM.W.formatPrice(methods[0].rate);
+        }
+        $("#pd-active-shipping").html(selectedMethod);
+    }
+    $("#pd-cartwidget-shippingMethods").html(output);
+};
+FBSM.W.formatPrice = function(price) {
+    var n = parseFloat(price),
+        i = parseInt(n = Math.abs(n).toFixed(2)) + '',
+        j = ((j = i.length) > 3) ? j % 3 : 0;
+    return '$' + ((n < 0) ? '-' : '') + (j ? i.substr(0, j) + ',' : '') + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1,") + ('.' + Math.abs(n - i).toFixed(2).slice(2));
+};
+
+FBSM.C.LocationMappingWidget = (function() {
+  var alphabet = [],
+    addresses = [],
+    geocodingResults = [],
+    emptyElement = $(),
+    geolocateSupported = true,
+    polyfillPlaceholder = false,
+    geolocateButton = emptyElement,
+    zipSearchButton = emptyElement,
+    searchVal = emptyElement,
+    container = emptyElement,
+    header = emptyElement,
+    sidebar = emptyElement,
+    locations = emptyElement,
+    errorClass = '.location-search-error',
+    canvas = emptyElement,
+    geocoder = null,
+    bounds = null,
+    infoWindow = null,
+    map = null;
+
+  function initialize(alpha, cntr) {
+    alphabet = alpha;
+
+    geolocateButton = $('.location-search-auto');
+    zipSearchButton = $('.location-search-go');
+    container = cntr;
+    geolocateSupported = geoLocationTest();
+    searchVal = $('.location-search-input');
+    header = container.find('.location-header');
+    sidebar = container.find("#location-sidebar");
+    locations = sidebar.length > 0 ? sidebar.find(".location") : $(".location-details");
+    errorClass = '.location-search-error';
+    canvas = $("#map_canvas");
+    geocoder = new google.maps.Geocoder();
+    bounds = new google.maps.LatLngBounds();
+    infoWindow = new google.maps.InfoWindow();
+    map = new google.maps.Map(canvas.get(0), {
+      zoom: 12,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    });
+
+    if (!('placeholder' in $('<input>')[0] || 'placeHolder' in $('<input>')[0])) {
+      polyfillPlaceholder = true;
+    }
+
+    if (polyfillPlaceholder) {
+      var ph = searchVal.attr('placeholder');
+      searchVal.val(ph);
+      searchVal.on('focus', function() {
+        if ($(this).val() === ph) {
+          $(this).val('');
+        }
+      }).on('blur', function() {
+        if (!$(this).val().length) {
+          $(this).val(ph);
+        }
+      });
+    }
+
+    var ENTER_BUTTON = 13;
+
+    geolocateButton.on('click', onGeolocateClicked);
+    zipSearchButton.on('click', onZipSearchClicked);
+    searchVal.on('keypress', function(e) {
+      switch (e.which) {
+      case ENTER_BUTTON:
+        zipSearchButton.trigger('click');
+        break;
+      default:
+        break;
+      }
+    });
+    locations.each(function() {
+      var marker = false,
+        el = $(this),
+        lat = el.find('#lat'),
+        lon = el.find('#long');
+
+      if (lat.val().length && lon.val().length) {
+        marker = new google.maps.LatLng(lat.val(), lon.val());
+      }
+
+      addresses.push({
+        "address": $(this).find("address").text().trim(),
+        "latlong": marker,
+        "id": $(this).attr('id'),
+        "ignore": false
+      });
+    });
+
+    // Attempt to geocode all the locations,
+    // and push the async calls into array.
+    $.each(addresses, function(i, addy) {
+      if (!addy.latlong) {
+        geocodingResults.push(geocodeAddress(addy));
+      } else {
+        bounds.extend(addy.latlong);
+        addMarker(addy);
+      }
+    });
+
+    // Callback when all async functions complete.
+    $.when.apply($, geocodingResults).done(geocodingComplete);
+
+  }
+
+  function updateLocs() {
+    locations = sidebar.find('.location');
+  }
+
+  function geoLocationTest() {
+    if (!navigator.geolocation) {
+      geolocateButton.remove();
+      return false;
+    }
+    return true;
+  }
+
+  function geocodeSuccess(geo) {
+    var lat = geo.coords.latitude;
+    var lon = geo.coords.longitude;
+    performSearch({ lat: lat, lon: lon });
+  }
+
+  function geocodeError() {
+    presentError("Unable to determine your location automatically.");
+    FBSM.log(arguments);
+  }
+
+  function geocodeAddress(addy) {
+    var dfd = $.Deferred();
+    geocoder.geocode({ "address": addy.address }, function(results, status) {
+      if (status == google.maps.GeocoderStatus.OK) {
+        addy.latlong = results[0].geometry.location;
+        bounds.extend(results[0].geometry.location);
+        addMarker(addy);
+      } else {
+        addy.ignore = true;
+        $("#" + addy.id).hide();
+      }
+      dfd.resolve();
+    });
+    return dfd.promise();
+  }
+
+  function geocodingComplete() {
+    if (addresses.length == 1) {
+      map.setOptions({
+        maxZoom: 16
+      });
+      var listener = google.maps.event.addListener(map, "idle", function() {
+        map.setOptions({
+          maxZoom: 999
+        });
+        google.maps.event.removeListener(listener);
+      });
+    }
+    map.fitBounds(bounds);
+  }
+
+  function rpcRequest(options) {
+    return $.ajax({
+      type: "POST",
+      url: "Services/DataProvider.aspx",
+      data: {
+        "action": "getlocationdist",
+        "lat": options.lat ? options.lat : '',
+        "lon": options.lon ? options.lon : '',
+        "zip": options.zip ? options.zip : ''
+      },
+      dataType: "json",
+      contentType: "application/x-www-form-urlencoded"
+    });
+  }
+
+  function performSearch(search) {
+    clearError();
+    rpcRequest(search)
+      .done(function(orderMap) {
+        // console.log(orderMap)
+        if (orderMap === null || typeof orderMap === "undefined") {
+          hideLoading();
+          presentError("Unable to determine distances at this time.");
+          return false;
+        } else if (orderMap.length === 0) {
+          hideLoading();
+          presentError('Please enter a valid US or Canadian zipcode.');
+          return false;
+        }
+        locations.detach();
+        $.map(orderMap, function(info) {
+          var node = $(locations.filter('[data-location-id="' + info.id + '"]')),
+            distance = $('<p>', { 'class': 'location-distance pull-left' }).text(info.distance),
+            prevDistance = node.find('.location-distance');
+          if (prevDistance.length) {
+            prevDistance.remove();
+          }
+          distance.insertAfter(node.find('.phone'));
+          $('#location-sidebar').append(node);
+        });
+        updateLocs();
+        $(locations.get(0)).trigger('click', { zoom: true });
+        hideLoading();
+      })
+      .fail(function(err) {
+        hideLoading();
+        presentError(err);
+      });
+  }
+
+  function showLoading() {
+    container.addClass('loading');
+  }
+
+  function hideLoading() {
+    container.removeClass('loading');
+  }
+
+  function presentError(err) {
+    if (err) {
+      var prevErrors = header.find(errorClass),
+        msg = $('<div>', { 'class': errorClass.substr(1) }).text(err).hide(),
+        close = $('<a href="#" class="pull-right close-msg">&times;</a>').on('click', clearError);
+
+      if (prevErrors.length) {
+        clearError();
+      }
+      msg.append(close);
+      header.append(msg);
+      msg.slideDown();
+    }
+  }
+
+  function clearError() {
+    $(errorClass).remove();
+    return false;
+  }
+
+  function onGeolocateClicked() {
+    if (geolocateSupported) {
+      showLoading();
+      performSearch({});
+    }
+  }
+
+  function onZipSearchClicked() {
+    if (searchVal.val().length) {
+      showLoading();
+      performSearch({ zip: searchVal.val() });
+    } else {
+      presentError("Please enter an address or zipcode.");
+    }
+  }
+
+  function locationIcon(id, hover) {
+    var fill = hover ? 'fedf72' : 'fe7f72',
+      scale = '0.7',
+      text = alphabet[id];
+    return ('https://chart.apis.google.com/chart?chst=d_map_spin&chld=' + scale + '|0|' + fill + '|13|_|' + text);
+  }
+
+  function makeInfoHtml(id) {
+    html = $("#location-map-details-" + id).html();
+    if ($("#location_" + id).hasClass("location-details")) {
+      html = "<strong>" + $(".location-name").html() + "</strong><br/>" + html;
+    }
+    return html;
+  }
+
+  function addMarker(address) {
+    var locId = address.id.split('location_')[1],
+      location = $('#' + address.id);
+
+    var icon = $('<div>')
+      .addClass("location-pin")
+      .html($('<img>', { src: locationIcon(locId) }));
+
+    if (!location.hasClass("location-details")) {
+      location
+        .wrapInner($('<div>', { 'class': 'location-address' }))
+        .prepend(icon);
+
+      var marker = new google.maps.Marker({
+        map: map,
+        position: address.latlong,
+        title: address.address,
+        animation: google.maps.Animation.DROP,
+        icon: locationIcon(locId, false)
+      });
+
+      google.maps.event.addListener(marker, 'click', function() {
+        infoWindow.setContent(makeInfoHtml(locId));
+        map.panTo(marker.getPosition());
+        infoWindow.open(map, marker);
+        sidebar.scrollTo(location, 300);
+        $('div.location-selected').removeClass("location-selected");
+        $('#' + address.id).addClass('location-selected');
+      });
+
+      location.bind('mouseover', function() {
+        marker.setIcon(locationIcon(locId, true));
+        icon.find('img').attr({ src: locationIcon(locId, true) });
+      });
+
+      location.bind('mouseout', function() {
+        marker.setIcon(locationIcon(locId, false));
+        icon.find('img').attr({ src: locationIcon(locId, false) });
+      });
+
+      location.bind('click', function(e, options) {
+        google.maps.event.trigger(marker, 'click');
+        var zoom = map.getZoom();
+        if (options && options.zoom && zoom <= 7) {
+          map.setZoom(10);
+        }
+      });
+    } else {
+      var marker = new google.maps.Marker({
+        map: map,
+        position: address.latlong,
+        title: address.address,
+        animation: google.maps.Animation.DROP,
+        icon: locationIcon(locId, false)
+      });
+      infoWindow.setContent(makeInfoHtml(locId));
+      infoWindow.open(map, marker);
+    }
+  }
+
+  return {
+    init: initialize
+  };
+
+})();
+
+$(document).ready(function(){
+  if ($('div.has-icons').is("*")) {
+    FBSM.W.fitHeaderIcons();
+  }
+
+  FBSM.W.recalculateUnitScroller();
+
+  if(FBSM.W.miniPromos) {
+    if($("#polarisPromo").length > 0) {
+      if($.grep(FBSM.W.miniPromos, function(a){ return a.name=="polaris"; }).length>0) {
+        FBSM.W.swapMiniPromos("polaris");
+      } else {
+        $("#polarisPromo").parents(".sidebarWidgetControl").css("display", "none");
+      }
+    }
+
+    if($("#suzukiPromo").length > 0) {
+      if($.grep(FBSM.W.miniPromos, function(a){ return a.name=="suzuki"; }).length>0) {
+        FBSM.W.swapMiniPromos("suzuki");
+      } else {
+        $("#suzukiPromo").parents(".sidebarWidgetControl").css("display", "none");
+      }
+    }
+  }
+
+  if (FBSM.W.promotionsWidgetType) {
+    if (FBSM.W.promotionsWidgetType == "brand") {
+      var factPromos = $('.sidebarWidgetControl.minipromo'),
+        brands = factPromos.find('.typeLayerList > li'),
+        holder = factPromos.find('.typeLayerList.holder');
+
+      var hidePromoList = function(e) {
+        e.preventDefault();
+        var li = $(this);
+        li.unbind('click').click(showPromoList);
+        li.find('.backUp').remove();
+        li.removeClass('typeSelected');
+        li.find('.promoList').append(holder.children()).hide();
+        li.siblings().show();
+      };
+
+      var showPromoList = function(e) {
+        e.preventDefault();
+
+        var li = $(this);
+        var closeLink = $('<span>', { 'class': 'backUp' }).text('[x]');
+
+        closeLink.click(hidePromoList);
+        li.unbind('click').bind('click', hidePromoList);
+        li.addClass('typeSelected');
+        li.siblings().hide();
+        holder.append(li.find('.promoList').children());
+        li.append(closeLink);
+      };
+
+      brands.each(function() { $(this).click(showPromoList); });
+
+      brands.parent('li').hover(
+        function() { $(this).addClass('liHover') },
+        function() { $(this).removeClass('liHover') }
+      );
+    } else {
+      if (FBSM.W.miniPromoLogos.length > 0) {
+        if (FBSM.W.miniPromoLogos.length > 1) {
+          FBSM.W.swapMiniPromoLogo();
+        } else {
+          var img = new Image();
+          var imgsrc = FBSM.W.miniPromoLogos[0].imageUrl;
+          if (document.location.protocol == "https:") {
+            imgsrc = imgsrc.replace("http://images.endeavorsuite.com", "https://media.50below.com").replace("http://media.50below.com", "https://media.50below.com");
+          }
+          $(img).load(function() {
+            $(this).hide();
+            $('#miniPromo a').html(this);
+            $(this).fadeIn();
+          }).attr('src', imgsrc).css('border', 0);
+        }
+      } else {
+        $("#miniPromo").parents(".sidebarWidgetControl").css("display", "none");
+      }
+    }
+  }
+
+  $("#sidebarWidget_Container").on("click", "#ari_partStreamWidget_submit", function() {
+    if ($("#ari_brand option:selected").val() != "---") {
+      if ($.trim($("#ari_model").val()) != "" || $.trim($("#ari_part").val()) != "") {
+        window.location.href = "oempartfinder.htm#/s/" + $("#ari_brand option:selected").val().replace(/[_]/g, "%7C~") + "/" + $("#ari_model").val() + "/" + $("#ari_part").val() + "/1";
+        window.scrollTo(0, 0);
+      } else {
+        window.location.href = "oempartfinder.htm?aribrand=" + $("#ari_brand option:selected").val() + "&arian=" + $("#ari_type option:selected").val();
+      }
+    } else {
+      alert("Please select Brand to search");
+    }
+  });
+  $("#sidebarWidget_Container").on("change", "#ari_brand", function() {
+    var brand = $(this).find(":selected").val();
+
+    $.ajax({
+      url: "Services/PartStreamApiService.aspx",
+      type: "POST",
+      data: {
+        "action": "getassemblies",
+        "brandCode": brand
+      },
+      success: function(res) {
+        $("#ari_type").html("<select name='ari_type' id='ari_type'>");
+        $("#ari_type").append(res);
+        $("#ari_type").append("</select>");
+      },
+      error: function(e) {
+        $("#ari_type").html("<select name='ari_type' id='ari_type'>");
+        $("#ari_type").append("<option value='---'>---</option>");
+        $("#ari_type").append("</select>");
+      }
+    });
+  });
+
+  if(typeof(alphabet)!="undefined" && alphabet) {
+    if($('.location-info').length > 0) {
+      FBSM.C.LocationMappingWidget.init(alphabet, $('.location-info'));
+    }
+
+    if($('.locationmapping').length > 0) {
+      FBSM.C.LocationMappingWidget.init(alphabet, $('.locationmapping'));
+    }
+  }
+
+  $('#pd-more-shipping').click(function(event) {
+      $('#pd-cartwidget-selected-shipping').fadeOut(function() {
+          $('#pd-cartwidget-all-shipping').fadeIn();
+      });
+      event.preventDefault();
+  });
+  $('#pd-cartwidget-update-shipping').click(function() {
+      var $rdo = $('input[name=select-shipping]:checked', "#pd-cartwidget-all-shipping");
+      var selectedMethodId = $rdo.closest('div').find(".select-shipping-id").val();
+      $.ajax({
+          type: "POST",
+          url: 'Services/WidgetServices.aspx',
+          data: "action=updateshipping&shipping=" + selectedMethodId,
+          dataType: "html",
+          contentType: "application/x-www-form-urlencoded",
+          success: function(res) {
+              if (res == "") {
+                  $('#pd-active-shipping').html($rdo.val());
+                  $('#pd-cartwidget-selectedMethod').val(selectedMethodId);
+                  $('#pd-cartwidget-all-shipping').fadeOut(function() {
+                      $('#pd-cartwidget-selected-shipping').fadeIn();
+                  });
+              } else {
+                  alert(res);
+              }
+          }
+      });
+  });
+
+  if ($('#productGroupWidget .slidingWidgetRotator').length > 0) {
+      $('#productGroupWidget .slidingWidgetGroupRotator').serialScroll({
+          items: 'li',
+          prev: '#productGroupWidget .slidingWidgetControls a.prev',
+          next: '#productGroupWidget .slidingWidgetControls a.next',
+          offset: 0,
+          start: 0,
+          duration: 1200,
+          force: true,
+          stop: true,
+          lock: false,
+          cycle: true,
+          easing: 'easeOutQuart',
+          jump: false,
+          constant: false,
+          interval: 8000
+      });
+  } else {
+      $("#productGroupWidget").parents(".sidebarWidgetControl").css("display", "none");
+  }
+  if ($('#usedVehicleWidget .slidingWidgetRotator').length > 0) {
+      $('#usedVehicleWidget .slidingWidgetGroupRotator').serialScroll({
+          items: 'li',
+          prev: '#usedVehicleWidget .slidingWidgetControls a.prev',
+          next: '#usedVehicleWidget .slidingWidgetControls a.next',
+          offset: 0,
+          start: 0,
+          duration: 1200,
+          force: true,
+          stop: true,
+          lock: false,
+          cycle: true,
+          easing: 'easeOutQuart',
+          jump: false,
+          constant: false,
+          interval: 8000
+      });
+  } else {
+      $("#usedVehicleWidget").parents(".sidebarWidgetControl").css("display", "none");
+  }
+  if ($('#usedVehicleWidget #rotatorCount').html() > 15) {
+      $('#usedVehicleWidget .slidingWidgetViewLink').show();
+      if ($('#usedVehicleWidget #rotatorShowroom').html() != '') {
+          $('#usedVehicleWidget .viewAll').attr('href', 'showcaseproductlist.htm?showrooms=' + $('#usedVehicleWidget #rotatorShowroom').html());
+      }
+  }
+  if($("#nlEmail").length > 0) {
+    $("#nlEmail").click(function() {
+      $("#nlFormTable").fadeIn();
+    });
+    $("#nlSubmit").click(function() {
+      $.ajax({
+        type: "POST",
+        url: "Services/WidgetServices.aspx",
+        data: "action=SubmitNewsLetter&FirstName=" + $("#nlFirstName").val() + "&LastName=" + $("#nlLastName").val() + "&Email=" + $("#nlEmail").val() + "&Captcha=" + $("#nlCaptcha").val() + "&ReceiveOffers=" + $("#receiveOffers").is(":checked").toString(),
+        dataType: "html",
+        contentType: "application/x-www-form-urlencoded",
+        success: function(response) {
+          if (response != '') {
+            $("#nlFirstName,#nlLastName,#nlEmail,#nlCaptcha").removeClass("nlFieldError");      
+            var responseParts = response.split('|');
+            $("#nlFieldError").html(responseParts[0]);
+            $("#nlFieldError").show();
+
+            if (responseParts.length > 1) {
+              var responseFields = responseParts[1].split(':');
+              for (var i = 0; i < responseFields.length; i++) {
+                $("#nl" + responseFields[i]).addClass("nlFieldError");
+              }
+                
+              $("#nlFormTable").fadeIn();
+            }
+          } else {
+            $("#nlFieldError").hide();
+            $("#nlSubmitted,#newsletterForm").toggle();
+            FBSM.C.loadCustomJavascriptParametersFromSource('s.linkTrackVars="events,eVar7,eVar37,prop27";s.linkTrackEvents="event5";s.events="event5";s.eVar7="Lead: Newsletter Widget";s.prop27={@siteId};s.eVar37=s.prop27;');
+          }
+          FBSM.C.captchaRefresh('nlCaptchaImage');
+        }
+      });
+    });
+    $("#nlClose").click(function() {
+      $("#nlFirstName,#nlLastName,#nlEmail,#nlCaptcha").removeClass("nlFieldError");
+      $("#nlFirstName,#nlLastName,#nlEmail,#nlCaptcha").val('');
+      $("#nlFormTable").hide();
+      $("#nlSubmitted,#newsletterForm").toggle();
+    });
+  }
+});

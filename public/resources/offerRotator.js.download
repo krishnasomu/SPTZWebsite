@@ -1,0 +1,189 @@
+FBSM.MR.rotator_autorotate = 1;
+FBSM.MR.rotator_current = -1;
+FBSM.MR.rotator_beenClicked = 0;
+FBSM.MR.rotator_zIndex = 20;
+FBSM.MR.rotator_initPosition = "relative";
+FBSM.MR.rotator_isHover = 0;
+FBSM.MR.rotator_delay = 6000;
+FBSM.MR.rotator_interval = 0;
+FBSM.MR.rotator_timeout = 0;
+FBSM.MR.rotator_aspectRatio = 245 / 760;
+
+FBSM.MR.swap = function() {
+  //Pause on hover, and stop auto rotate if any merch links have been clicked
+  if ((FBSM.MR.rotator_autorotate == 1) && (FBSM.MR.rotator_beenClicked == 0)) {
+    //attempt to make a crossfade
+    FBSM.MR.advancePromo('+');
+    FBSM.MR.animateSwap(FBSM.MR.rotator_current);
+    $("#rotator2ThumbsInner").trigger('goto', [FBSM.MR.rotator_current]);
+    //Pause before advancing to next frame.
+    window.clearTimeout(FBSM.MR.rotator_interval);
+    FBSM.MR.rotator_interval = setTimeout('FBSM.MR.swap()', FBSM.MR.rotator_delay);
+  }
+};
+FBSM.MR.advancePromo = function(direction) {
+  direction == '+' ? FBSM.MR.rotator_current++ : FBSM.MR.rotator_current--;
+  if (FBSM.MR.rotator_current < 0) {
+    FBSM.MR.rotator_current = (FBSM.MR.numSlides - 1);
+  } else if (FBSM.MR.rotator_current == FBSM.MR.numSlides) {
+    FBSM.MR.rotator_current = 0;
+  }
+}; /* Function to Tween slides. */
+FBSM.MR.animateSwap = function(swapto) {
+  FBSM.MR.updateControls(FBSM.MR.rotator_current);
+  var slide2show = $('#rSlide_' + swapto);
+  if (FBSM.MR.rotator_type == 1) FBSM.MR.rotator_zIndex++;
+  if (!$('#rotateLoaderDiv').hasClass(swapto + 'Loaded')) {
+    FBSM.MR.rotator_zIndex++;
+    $('#rotateLoaderDiv').css('z-index', FBSM.MR.rotator_zIndex);
+  }
+  FBSM.MR.rotator_zIndex++;
+
+  /* Make sure slide is loaded */
+  var img = new Image();
+  $(img).load(function() {
+    $('#rotateLoaderDiv').addClass(swapto + 'Loaded');
+    switch (FBSM.MR.rotator_type) {
+    case "1":
+      slide2show.hide().css({
+        'z-index': FBSM.MR.rotator_zIndex,
+        'top': '245px',
+        'opacity': '0.5'
+      }).show().animate({
+        'top': '0px',
+        'opacity': '1'
+      }, 400, 'easeInSine', function() {
+        $(this).css({ 'top': 0 });
+      });
+      $('#rotoSlideControls, #rotatorPrev, #rotatorNext').css('z-index', FBSM.MR.rotator_zIndex + 2);
+      break;
+    case "2":
+      slide2show.hide().show().css({
+        'z-index': FBSM.MR.rotator_zIndex,
+        'opacity': '0'
+      }).animate({
+        'opacity': '1'
+      }, 400, 'easeInSine');
+      break;
+    case "3":
+      slide2show.hide().show().css({
+        'left': '760px',
+        'z-index': FBSM.MR.rotator_zIndex,
+        'opacity': '0'
+      }).animate({
+        'left': '0px',
+        'opacity': '1'
+      }, 400, 'easeInSine', function() {
+        $(this).css({ 'left': 0 });
+      });
+      break;
+    }
+  }).attr('src', $('img', slide2show).attr('src'));
+};
+FBSM.MR.updateControls = function(active) {
+  $('.rThumb', '#rotoSlideControls').removeClass('rSelectedThumb');
+  if (FBSM.MR.rotator_type == 3) {
+    $('#rThumb_' + active).addClass('rSelectedThumb');
+  } else {
+    $('#rThumb_' + active).css('opacity', 1).addClass('rSelectedThumb');
+  }
+}; //Function to handle clicks.
+FBSM.MR.swapClick = function(swapto) {
+  if (FBSM.MR.rotator_current != swapto) {
+    FBSM.MR.rotator_current = swapto;
+    //Disable Autorotate
+    FBSM.MR.rotator_autorotate = 0;
+    FBSM.MR.rotator_beenClicked = 1;
+    //Swap slides
+    FBSM.MR.animateSwap(swapto);
+  }
+};
+
+$(document).ready(function() {
+  FBSM.MR.rotator_div = $("div[id^='fbsm_roto_']:first");
+  if (FBSM.MR.rotator_div.length > 0) {
+
+    // Keep aspect ratio the same regardless of width.
+    var slideArea = $('#rotoSlideArea');
+    var adjustedHeight = Math.round(slideArea.width() * FBSM.MR.rotator_aspectRatio);
+    slideArea.height(adjustedHeight);
+
+    FBSM.MR.rotator_type = FBSM.MR.rotator_div.attr("id").replace("fbsm_roto_", "");
+    FBSM.MR.numSlides = $('.rotoSlide', FBSM.MR.rotator_div).size();
+    FBSM.MR.swap();
+
+    $('#rCaption').hide();
+    $('.rThumb', FBSM.MR.rotator_div).hover(function() {
+      var $thumb = $(this);
+
+      if (FBSM.MR.rotator_type == 2) {
+        $('#slideCaption').html($(this).attr('title'));
+      } else if (FBSM.MR.rotator_type == 3) {
+        clearTimeout(FBSM.MR.rotator_timeout);
+        var oldWidth = $('#rCaption').width();
+        // Use this to get upcoming text width();
+        var $dupeCaption = $("<div class='r3CaptionDupe'>" + $(this).attr('title') + "</div>");
+        $('body').append($dupeCaption);
+        var newWidth = $dupeCaption.width();
+        var newOuterWidth = $dupeCaption.outerWidth();
+        $dupeCaption.remove();
+        var rotatorWidth = slideArea.width();
+
+        var edge = rotatorWidth - $thumb.position().left - ($thumb.width() / 2) - (newOuterWidth / 2);
+
+        if ((rotatorWidth - edge) > ($(".rThumb:last").position().left + $(".rThumb:last").outerWidth())) {
+          edge = rotatorWidth - ($(".rThumb:last").position().left + $(".rThumb:last").outerWidth());
+        } else if (((rotatorWidth - edge) - newOuterWidth) < 2) {
+          edge = rotatorWidth - newOuterWidth - 2;
+        }
+
+        if ($('#rCaption').is(':hidden')) {
+          $('#rCaption').css({ 'right': edge, 'width': newWidth }).html($thumb.attr('title')).show();
+        } else {
+          $('#rCaption').animate({ 'right': edge, 'width': newWidth }, 400).html($thumb.attr('title'));
+        }
+
+      } else {
+        $('#rCaption').html($(this).attr('title')).show();
+      }
+    }, function() {
+      $('#slideCaption').html('');
+      if (FBSM.MR.rotator_type == 2) {
+      } else if (FBSM.MR.rotator_type == 3) {
+        $('#rCaption').stop().clearQueue();
+        FBSM.MR.rotator_timeout = setTimeout('$("#rCaption").hide();', 100);
+      } else {
+        $('#rCaption').hide();
+      }
+    });
+    $('#rotatorPrev').click(function() {
+      FBSM.MR.rotator_beenClicked = 1;
+      FBSM.MR.advancePromo('-');
+      FBSM.MR.animateSwap(FBSM.MR.rotator_current);
+    });
+    $('#rotatorNext').click(function() {
+      FBSM.MR.rotator_beenClicked = 1;
+      FBSM.MR.advancePromo('+');
+      FBSM.MR.animateSwap(FBSM.MR.rotator_current);
+    });
+    $("#r2thumbPrev, #r2thumbNext").click(function() {
+      FBSM.MR.rotator_beenClicked = 1;
+    });
+
+    /* Fire up thumbnail scroller for rotator two if 10 or more slides exists */
+    if ($('img.rThumb', '#fbsm_roto_2').length >= 10) {
+      $('#rotatorThumbs').addClass('scrolling');
+      $('#rotator2ThumbsInner').serialScroll({
+        items: 'img',
+        prev: '#r2thumbPrev',
+        next: '#r2thumbNext',
+        step: 9,
+        jump: true,
+        duration: 500,
+        constant: false,
+        offset: -189
+      });
+    }
+
+  }
+});

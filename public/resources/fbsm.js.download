@@ -1,0 +1,73 @@
+﻿(function() {
+
+  var FBSM = {
+    C: {},
+    CO: {},
+    EPD: {},
+    EZ: {},
+    F: {},
+    G: {},
+    HF: {},
+    MR: {},
+    PD: {},
+    R: {},
+    SC: {},
+    TF: {},
+    TFG: {},
+    U: {},
+    W: {},
+    WC: {},
+    WViz: {},
+    SR: {},
+    UI: {}
+  };
+
+  var log = function() {
+    if (window.console && window.console.log) {
+      var args = [].slice.call(arguments, 0);
+      if (console.log.apply) {
+        console.log.apply(console, args);
+      }
+    }
+  };
+
+  FBSM.log = log;
+
+  window.FBSM = window.FBSM || FBSM;
+  window.isMobile = false;
+
+  // Prototype extensions
+  var stubMethods = {
+    lastIndexOfAny: function(any) {
+      if (typeof src == 'string' && typeof any == 'string') {
+        for (var i = this.length - 1; i >= 0; i--) {
+          if (any.indexOf(this[i]) >= 0) return i;
+        }
+        return -1;
+      }
+    },
+    trim: function() {
+      return this.replace(/^\s+|\s+$/g, "");
+    },
+    decodeHtmlTags: function() {
+      return this.replace(/&gt;/g, ">").replace(/&lt;/g, "<");
+    },
+    encodeHtmlTags: function() {
+      return this.replace(/>/g, "&gt;").replace(/</g, "&lt;");
+    },
+    addSlashes: function() {
+      return this.replace(/([\\"'])/g, "\\$1").replace(/\u0000/g, "\\0");
+    }
+  };
+
+  var methodsToStub = 'lastIndexOfAny trim decodeHtmlTags encodeHtmlTags addSlashes'.split(' ');
+  var idx = methodsToStub.length;
+
+  do {
+    (function(method) {
+      if (!''[method] && typeof ''[method] !== 'function') {
+        String.prototype[method] = stubMethods[method];
+      }
+    })(methodsToStub[idx - 1]);
+  } while (--idx);
+})();

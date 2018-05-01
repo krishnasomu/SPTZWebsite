@@ -1,0 +1,115 @@
+
+var waypoint = {
+
+	hrefClass: function(linkTarget, classTarget) {
+		// Adds a naming class to each list item.
+		$(linkTarget).each(function() {
+			var el = $(this),
+				u = el.attr("href").split("."),
+				c = u[0].toLowerCase();
+			if (classTarget) {
+				$(classTarget).addClass(c);
+			} else {
+				el.parent().addClass(c);
+			}
+		});
+	},
+
+	navEnhancements: function(hideFirstNavItem, addLinkClass) {
+		// Prime Nav Setup
+		// supersubs is broken breaks when appdev scripts are present.
+		$('#primeNavList').superfish({
+			hoverClass  : 'navHover',           // the class applied to hovered list items
+			pathClass   : 'current-page-item',  // the class you have applied to list items that lead to the current page
+			pathLevels  : 1,                    // the number of levels of submenus that remain open or are restored using pathClass
+			delay       : 300,                  // the delay in milliseconds that the mouse can remain outside a submenu without it closing
+			speed       : 'normal'              // speed of the animation. Equivalent to second parameter of jQuery’s .animate() method
+		});
+
+		// Hide the first child of submenus because it displays the same link.
+		if (hideFirstNavItem) {
+			$('#primeNavList li ul li:first-child').hide();
+		}
+
+		// Adds a naming class to each list item.
+		if (addLinkClass) {
+			var target = $("#primeNavList li a");
+			waypoint.hrefClass(target);
+		}
+	},
+
+	// Adds searchbar focus state.
+	addSearchFocus: function() {
+		var el = $("#ecomm_SearchProducts");
+
+		$("#searchProducts").live({
+			focusin: function() {
+				el.addClass("search-focused")
+			},
+			focusout: function() {
+				el.removeClass("search-focused")
+			}
+		});
+	},
+
+	// Adds scrolling to the recently viewed products widget.
+	addCartWidgetScrolling: function() {
+		var el = $('.recentlyviewedproducts'),
+				prod = el.find(".sidebar-product"),
+				wrapper = "recentProdWrapper";
+
+		if (prod.length > 1) {
+			$(prod).wrapAll('<div class=' + wrapper + '/>');
+			el.find("." + wrapper).cycle({
+				fx       : 'scrollLeft',
+				pause    : true,
+				fit      : true
+			});
+		}
+	},
+
+	// Hides the tertiary nav if there are no children pages.
+	autoHideSidebar: function() {
+		if ($("#ecomm_sideBar .navItem").length == 1) {
+			var content = $("#content"),
+					ctm = ["templateLeftNav", "indexLeftNav"], // Classes to match.
+					ctc = ["templateNoLeftNav", "indexNoLeftNav"]; // Classes to change.
+
+			if (content.hasClass(ctm[0])) {
+				content.switchClass(ctm[0], ctc[0]);
+			} else {
+				content.switchClass(ctm[1], ctc[1]);
+			}
+		}
+	},
+
+	// Adds skin matching arrows to WIM Headers.
+	cleanWIMHeader: function() {
+		var newArrow = '<div class="ui-state-active ui-corner-all"><span class="ui-icon ui-icon-carat-2-n-s"></span></div>';
+		$(".equipmentList_tblRowHeader th").find('img').replaceWith(newArrow);
+	},
+
+	// Adds classes and icon spans to shopnav links.
+	cleanShopNav: function(placement) {
+		$(".ecomm_shopNavLink").each(function(i) {
+			var el = $(this),
+					u = el.attr("href").split("."),
+					c = u[0].toLowerCase();
+
+			(placement == "right") ? el.addClass(c).append('<span class="shop-icon"></span>') :
+					el.addClass(c).prepend('<span class="shop-icon"></span>');
+
+			el.find('.shop-icon').css({float: placement});
+		});
+	},
+
+	// Removes the shop page title if merch is visible.
+	cleanShopPage: function() {
+		if ( window.location.pathname == "/shop.htm" && $('.mainWidgetControl.offerrotator').is(':visible') ) {
+			$('#ecomm_pageTitle').hide();
+			$('#ecomm_shopContent').css({
+				paddingTop: 0
+			});
+		}
+	}
+};

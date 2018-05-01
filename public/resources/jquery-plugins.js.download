@@ -1,0 +1,811 @@
+﻿jQuery.easing.easeOutQuart = function(x, t, b, c, d) { return -c * ((t = t / d - 1) * t * t * t - 1) + b; };
+/* Copyright (c) 2007-2012 Ariel Flesler - aflesler(at)gmail(dot)com | http://flesler.blogspot.com * Dual licensed under MIT and GPL. * @author Ariel Flesler * @version 1.4.3.1 */
+;
+(function($) {
+  var h = $.scrollTo = function(a, b, c) { $(window).scrollTo(a, b, c) };
+  h.defaults = { axis: 'xy', duration: parseFloat($.fn.jquery) >= 1.3 ? 0 : 1, limit: true };
+  h.window = function(a) { return $(window)._scrollable() };
+  $.fn._scrollable = function() {
+    return this.map(function() {
+      var a = this, isWin = !a.nodeName || $.inArray(a.nodeName.toLowerCase(), ['iframe', '#document', 'html', 'body']) != -1;
+      if (!isWin) return a;
+      var b = (a.contentWindow || a).document || a.ownerDocument || a;
+      return /webkit/i.test(navigator.userAgent) || b.compatMode == 'BackCompat' ? b.body : b.documentElement;
+    });
+  };
+  $.fn.scrollTo = function(e, f, g) {
+    if (typeof f == 'object') {
+      g = f;
+      f = 0;
+    }
+    if (typeof g == 'function') g = { onAfter: g };
+    if (e == 'max') e = 9e9;
+    g = $.extend({}, h.defaults, g);
+    f = f || g.duration;
+    g.queue = g.queue && g.axis.length > 1;
+    if (g.queue) f /= 2;
+    g.offset = both(g.offset);
+    g.over = both(g.over);
+    return this._scrollable().each(function() {
+      if (e == null) return;
+      var d = this, $elem = $(d), targ = e, toff, attr = {}, win = $elem.is('html, body');
+      switch (typeof targ) {
+      case 'number':
+      case 'string':
+        if (/^([+-]=)?\d+(\.\d+)?(px|%)?$/.test(targ)) {
+          targ = both(targ);
+          break;
+        }
+        targ = $(targ, this);
+        if (!targ.length) return;
+      case 'object':
+        if (targ.is || targ.style) toff = (targ = $(targ)).offset();
+      }
+      $.each(g.axis.split(''), function(i, a) {
+        var b = a == 'x' ? 'Left' : 'Top', pos = b.toLowerCase(), key = 'scroll' + b, old = d[key], max = h.max(d, a);
+        if (toff) {
+          attr[key] = toff[pos] + (win ? 0 : old - $elem.offset()[pos]);
+          if (g.margin) {
+            attr[key] -= parseInt(targ.css('margin' + b)) || 0;
+            attr[key] -= parseInt(targ.css('border' + b + 'Width')) || 0;
+          }
+          attr[key] += g.offset[pos] || 0;
+          if (g.over[pos]) attr[key] += targ[a == 'x' ? 'width' : 'height']() * g.over[pos];
+        } else {
+          var c = targ[pos];
+          attr[key] = c.slice && c.slice(-1) == '%' ? parseFloat(c) / 100 * max : c;
+        }
+        if (g.limit && /^\d+$/.test(attr[key])) attr[key] = attr[key] <= 0 ? 0 : Math.min(attr[key], max);
+        if (!i && g.queue) {
+          if (old != attr[key]) animate(g.onAfterFirst);
+          delete attr[key];
+        }
+      });
+      animate(g.onAfter);
+
+      function animate(a) { $elem.animate(attr, f, g.easing, a && function() { a.call(this, e, g) }) }
+    }).end();
+  };
+  h.max = function(a, b) {
+    var c = b == 'x' ? 'Width' : 'Height', scroll = 'scroll' + c;
+    if (!$(a).is('html, body')) return a[scroll] - $(a)[c.toLowerCase()]();
+    var d = 'client' + c, html = a.ownerDocument.documentElement, body = a.ownerDocument.body;
+    return Math.max(html[scroll], body[scroll]) - Math.min(html[d], body[d]);
+  };
+
+  function both(a) { return typeof a == 'object' ? a : { top: a, left: a } }
+})(jQuery);
+/* jQuery.SerialScroll * Copyright (c) 2007-2010 Ariel Flesler - aflesler(at)gmail(dot)com | http://flesler.blogspot.com * Dual licensed under MIT and GPL. * Date: 05/31/2010 */
+;
+(function($) {
+  var NAMESPACE = '.serialScroll';
+  var $serialScroll = $.serialScroll = function(settings) { return $(window).serialScroll(settings); };
+  $serialScroll.defaults = { duration: 1000, axis: 'x', event: 'click', start: 0, step: 1, lock: true, cycle: true, constant: true };
+  $.fn.serialScroll = function(options) {
+    return this.each(function() {
+      var settings = $.extend({}, $serialScroll.defaults, options), event = settings.event, step = settings.step, lazy = settings.lazy, context = settings.target ? this : document, $pane = $(settings.target || this, context), pane = $pane[0], items = settings.items, active = settings.start, auto = settings.interval, nav = settings.navigation, timer;
+      if (!pane) return;
+      if (!lazy) {
+        items = getItems();
+      }
+      if (settings.force || auto) {
+        jump({}, active);
+      }
+      $(settings.prev || [], context).bind(event, -step, move);
+      $(settings.next || [], context).bind(event, step, move);
+      if (!pane.ssbound) {
+        $pane.bind('prev' + NAMESPACE, -step, move).bind('next' + NAMESPACE, step, move).bind('goto' + NAMESPACE, jump);
+      }
+      if (auto) {
+        $pane.bind('start' + NAMESPACE, function(e) {
+          if (!auto) {
+            clear();
+            auto = true;
+            next();
+          }
+        }).bind('stop' + NAMESPACE, function() {
+          clear();
+          auto = false;
+        });
+      }
+      $pane.bind('notify' + NAMESPACE, function(e, elem) {
+        var i = index(elem);
+        if (i > -1) {
+          active = i;
+        }
+      });
+      pane.ssbound = true;
+      if (settings.jump) {
+        (lazy ? $pane : getItems()).bind(event, function(e) { jump(e, index(e.target)); });
+      }
+      if (nav) {
+        nav = $(nav, context).bind(event, function(e) {
+          e.data = Math.round(getItems().length / nav.length) * nav.index(this);
+          jump(e, this);
+        });
+      }
+
+      function move(e) {
+        e.data += active;
+        jump(e, this);
+      };
+
+      function jump(e, pos) {
+        if (isNaN(pos)) pos = e.data;
+        var n, real = e.type, $items = settings.exclude ? getItems().slice(0, -settings.exclude) : getItems(), limit = $items.length - 1, elem = $items[pos], duration = settings.duration;
+        if (real) e.preventDefault();
+        if (auto) {
+          clear();
+          timer = setTimeout(next, settings.interval);
+        }
+        if (!elem) {
+          n = pos < 0 ? 0 : limit;
+          if (active !== n) {
+            pos = n;
+          } else if (!settings.cycle) {
+            return;
+          } else {
+            pos = limit - n;
+          }
+          elem = $items[pos];
+        }
+        if (!elem || settings.lock && $pane._scrollable().is(':animated') || real && settings.onBefore && settings.onBefore(e, elem, $pane, getItems(), pos) === false) return;
+        if (settings.stop) $pane._scrollable().stop(true);
+        if (settings.constant) duration = Math.abs(duration / step * (active - pos));
+        $pane.scrollTo(elem, duration, settings);
+        trigger('notify', pos);
+      };
+
+      function next() { trigger('next'); };
+
+      function clear() { clearTimeout(timer); };
+
+      function getItems() { return $(items, pane); };
+
+      function trigger(event) { $pane.trigger(event + NAMESPACE, [].slice.call(arguments, 1)); }
+
+      function index(elem) {
+        if (!isNaN(elem)) return elem;
+        var $items = getItems(), i;
+        while ((i = $items.index(elem)) === -1 && elem !== pane) elem = elem.parentNode;
+        return i;
+      };
+    });
+  };
+})(jQuery);
+/* Copyright (c) 2006-2007 Mathias Bank (http://www.mathias-bank.de) * Dual licensed under the MIT (http://www.opensource.org/licenses/mit-license.php)  * and GPL (http://www.opensource.org/licenses/gpl-license.php) licenses. * Version 2.1 * Thanks to Hinnerk Ruemenapf - http://hinnerk.ruemenapf.de/ for bug reporting and fixing.  Tom Leonard for some improvements */
+jQuery.fn.extend({
+  getUrlParam: function(strParamName) {
+    strParamName = escape(unescape(strParamName));
+    var returnVal = new Array();
+    var qString = null;
+    if ($(this).html() != null && typeof $(this).attr("src") != "undefined") {
+      var strHref = $(this).attr("src");
+      if (strHref.indexOf("?") > -1) {
+        var strQueryString = strHref.substr(strHref.indexOf("?") + 1);
+        qString = strQueryString.split("&");
+      }
+    } else if ($(this).html() != null && typeof $(this).attr("href") != "undefined") {
+      var strHref = $(this).attr("href");
+      if (strHref.indexOf("?") > -1) {
+        var strQueryString = strHref.substr(strHref.indexOf("?") + 1);
+        qString = strQueryString.split("&");
+      }
+    } else {
+      if (window.location.search.search(strParamName) > -1) {
+        qString = window.location.search.substr(1, window.location.search.length).split("&");
+      } else {
+        qString = null;
+      }
+    }
+    if (qString == null) return null;
+    for (var i = 0; i < qString.length; i++) {
+      if (escape(unescape(qString[i].split("=")[0])) == strParamName) {
+        returnVal.push(qString[i].split("=")[1]);
+      }
+    }
+    if (returnVal.length == 0) {
+      return null;
+    } else if (returnVal.length == 1) {
+      return returnVal[0];
+    } else {
+      return returnVal;
+    }
+  }
+});
+/* jquery.create */
+(function($) {
+  $.extend({
+    create: function(element, attributes, children) {
+      var elem = $(document.createElement(element));
+      if (typeof (attributes) == 'object') {
+        for (key in attributes) {
+          elem.attr(key, attributes[key]);
+        }
+      }
+      if (typeof (children) == 'string') {
+        elem.text(children);
+      } else if (typeof (children) == 'object') {
+        for (i = 0; i < children.length; i++) {
+          elem.append(children[i]);
+        }
+      }
+      return elem;
+    }
+  });
+})(jQuery);
+/* jquery.selectBox */
+eval(function(p, a, c, k, e, r) {
+  e = function(c) { return (c < a ? '' : e(parseInt(c / a))) + ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36)) };
+  if (!''.replace(/^/, String)) {
+    while (c--) r[e(c)] = k[c] || e(c);
+    k = [function(e) { return r[e] }];
+    e = function() { return '\\w+' };
+    c = 1;
+  };
+  while (c--) if (k[c]) p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]);
+  return p;
+}('z.1U.1T({F:3(a){5 9.1e(3(){z.1h(9,a)})}});z.1h=3(e,f){2 g=f||{};g.G=g.G||"F";g.J=g.J||"F-1L";g.L=g.L||"1F";g.P=g.P||"1E";g.r=g.r||"1D";g.u=g.1C||"1c";2 h=e.7;2 i=($("#"+h+"N").Y==0);2 j=-1;2 k=x;2 l=x;2 m=$(e);2 n=X(g);2 o=Z(g);2 p=11(g);2 q=15(g);m.O().17(q).17(n);18();o.B(3(){4(!k){k=!k;n.1g()}});p.B(3(){4(!k){k=!k;n.1g()}});o.1z(3(){k=E;n.1y()});o.1x(3(a){1w(a.1v){C 1s:a.H();I(-1);A;C 1m:a.H();I(1);A;C 13:a.H();$(\'y.\'+g.r).1l(\'B\');A;C 1k:D();A}});o.1j(3(){4(k&&!l)D()});n.19(3(a){l=x});n.1a(3(a){l=E});3 D(){k=x;l=x;n.O()}3 18(){n.O();n.1b();n.Q(1d(o.6(\'7\')));n.1f(o.1H(\'1f\'));q.1b();q.Q(o);q.Q(p)}3 X(a){2 b;4(i){2 c=s.t("M");b=$(c);b.6(\'7\',h+"12");b.8(a.J)}w{b=$("#"+h+"12")}5 b}3 Z(a){2 b;4(i){2 c=s.t("1n");b=$(c);b.6("7",h+"N");b.6("1o","1p");b.8(a.G);b.6("1q","1r");b.6("W","W");b.6("1t",m.6("1u"))}w{b=$("#"+h+"N")}5 b}3 11(a){2 b;4(i){2 c=s.t("M");b=$(c);b.6("7",h+"V");b.8(a.L)}w{b=$("#"+h+"V")}5 b}3 15(a){2 b;4(i){2 c=s.t("M");b=$(c);b.6("7",h+"U");b.8(a.P)}w{b=$("#"+h+"U")}5 b}3 I(a){2 b=$("y",n);4(!b)5;j+=a;4(j<0){j=0}w 4(j>=b.T()){j=b.T()-1}b.R(g.r);$(b[j]).8(g.r)}3 16(){2 a=$("y."+g.u,n).1A(0);2 b=(\'\'+a.7).1B(\'10\');2 c=b[b.Y-1];m.v(c);2 d=$(a).K();o.v(d.1G("&1i;","&"));5 E}3 1I(){5 m.v()}3 1J(){5 o.v()}3 1d(c){2 d=s.t(\'1K\');d.S(\'7\',c+\'1M\');m.1N(\'1O\').1e(3(){2 b=s.t(\'y\');b.S(\'7\',c+\'10\'+$(9).v());b.1P=$(9).K();4($(9).1Q(\':1c\')){o.v($(9).K());$(b).8(g.u)}d.1R(b);$(b).B(3(a){$(\'y.\'+g.u).R(g.u);$(9).8(g.u);16();D();m.1S()});$(b).1a(3(a){z(a.14,n).8(g.r)});$(b).19(3(a){z(a.14,n).R(g.r)})});5 d}};', 62, 119, '||var|function|if|return|attr|id|addClass|this||||||||||||||||||hoverClass|document|createElement|currentClass|val|else|false|li|jQuery|break|click|case|hideMe|true|selectbox|inputClass|preventDefault|moveSelect|containerClass|html|buttonClass|div|_input|hide|buttonWrapperClass|append|removeClass|setAttribute|size|_buttonWrapper|_button|readonly|setupContainer|length|setupInput|_|setupSelectButton|_container||target|setupSelectButtonWrapper|setCurrent|before|init|mouseout|mouseover|empty|selected|getSelectOptions|each|width|toggle|SelectBox|amp|blur|27|trigger|40|input|type|text|autocomplete|off|38|tabIndex|tabindex|keyCode|switch|keydown|show|focus|get|split|selectedClass|current|selectButtonWrapper|selectButton|replace|css|getCurrentSelected|getCurrentValue|ul|wrapper|_ul|children|option|innerHTML|is|appendChild|change|extend|fn'.split('|'), 0, {})); /*jQuery.Cookies - Copyright (c) 2005 - 2008, James Auldridge; All rights reserved.  Licensed under the BSD, MIT, and GPL (your choice!) Licenses: http://code.google.com/p/cookies/wiki/License Version 2.0 */
+var jaaulde = window.jaaulde || {};
+jaaulde.utils = jaaulde.utils || {};
+jaaulde.utils.cookies = (function() {
+  var resolveOptions, assembleOptionsString, parseCookies, constructor, defaultOptions = { expiresAt: null, path: '/', domain: null, secure: false };
+  resolveOptions = function(options) {
+    var returnValue, expireDate;
+    if (typeof options !== 'object' || options === null) {
+      returnValue = defaultOptions;
+    } else {
+      returnValue = { expiresAt: defaultOptions.expiresAt, path: defaultOptions.path, domain: defaultOptions.domain, secure: defaultOptions.secure };
+      if (typeof options.expiresAt === 'object' && options.expiresAt instanceof Date) {
+        returnValue.expiresAt = options.expiresAt;
+      } else if (typeof options.hoursToLive === 'number' && options.hoursToLive !== 0) {
+        expireDate = new Date();
+        expireDate.setTime(expireDate.getTime() + (options.hoursToLive * 60 * 60 * 1000));
+        returnValue.expiresAt = expireDate;
+      }
+      if (typeof options.path === 'string' && options.path !== '') {
+        returnValue.path = options.path;
+      }
+      if (typeof options.domain === 'string' && options.domain !== '') {
+        returnValue.domain = options.domain;
+      }
+      if (options.secure === true) {
+        returnValue.secure = options.secure;
+      }
+    }
+    return returnValue;
+  };
+  assembleOptionsString = function(options) {
+    options = resolveOptions(options);
+    return ((typeof options.expiresAt === 'object' && options.expiresAt instanceof Date ? '; expires=' + options.expiresAt.toGMTString() : '') + '; path=' + options.path + (typeof options.domain === 'string' ? '; domain=' + options.domain : '') + (options.secure === true ? '; secure' : ''));
+  };
+  parseCookies = function() {
+    var cookies = {}, i, pair, name, value, separated = document.cookie.split(';'), unparsedValue, newpair;
+    for (i = 0; i < separated.length; i = i + 1) {
+      pair = new Array();
+      newpair = separated[i].split('=');
+      pair.push(newpair[0]);
+      newpair.splice(0, 1);
+      pair.push(newpair.join('='));
+      name = pair[0].replace(/^\s*/, '').replace(/\s*$/, '');
+      try {
+        value = decodeURIComponent(pair[1]);
+      } catch (e1) {
+        value = pair[1];
+      }
+      if (typeof JSON === 'object' && JSON !== null && typeof JSON.parse === 'function') {
+        try {
+          unparsedValue = value;
+          value = JSON.parse(value);
+        } catch (e2) {
+          value = unparsedValue;
+        }
+      }
+      cookies[name] = value;
+    }
+    return cookies;
+  };
+  constructor = function() {};
+  constructor.prototype.get = function(cookieName) {
+    var returnValue, item, cookies = parseCookies();
+    if (typeof cookieName === 'string') {
+      returnValue = (typeof cookies[cookieName] !== 'undefined') ? cookies[cookieName] : null;
+    } else if (typeof cookieName === 'object' && cookieName !== null) {
+      returnValue = {};
+      for (item in cookieName) {
+        if (typeof cookies[cookieName[item]] !== 'undefined') {
+          returnValue[cookieName[item]] = cookies[cookieName[item]];
+        } else {
+          returnValue[cookieName[item]] = null;
+        }
+      }
+    } else {
+      returnValue = cookies;
+    }
+    return returnValue;
+  };
+  constructor.prototype.filter = function(cookieNameRegExp) {
+    var cookieName, returnValue = {}, cookies = parseCookies();
+    if (typeof cookieNameRegExp === 'string') {
+      cookieNameRegExp = new RegExp(cookieNameRegExp);
+    }
+    for (cookieName in cookies) {
+      if (cookieName.match(cookieNameRegExp)) {
+        returnValue[cookieName] = cookies[cookieName];
+      }
+    }
+    return returnValue;
+  };
+  constructor.prototype.set = function(cookieName, value, options) {
+    if (typeof options !== 'object' || options === null) {
+      options = {};
+    }
+    if (typeof value === 'undefined' || value === null) {
+      value = '';
+      options.hoursToLive = -8760;
+    } else if (typeof value !== 'string') {
+      if (typeof JSON === 'object' && JSON !== null && typeof JSON.stringify === 'function') {
+        value = JSON.stringify(value);
+      } else {
+        throw new Error('cookies.set() received non-string value and could not serialize.');
+      }
+    }
+    var optionsString = assembleOptionsString(options);
+    document.cookie = cookieName + '=' + escape(value) + optionsString;
+  };
+  constructor.prototype.del = function(cookieName, options) {
+    var allCookies = {}, name;
+    if (typeof options !== 'object' || options === null) {
+      options = {};
+    }
+    if (typeof cookieName === 'boolean' && cookieName === true) {
+      allCookies = this.get();
+    } else if (typeof cookieName === 'string') {
+      allCookies[cookieName] = true;
+    }
+    for (name in allCookies) {
+      if (typeof name === 'string' && name !== '') {
+        this.set(name, null, options);
+      }
+    }
+  };
+  constructor.prototype.test = function() {
+    var returnValue = false, testName = 'cT', testValue = 'data';
+    this.set(testName, testValue);
+    if (this.get(testName) === testValue) {
+      this.del(testName);
+      returnValue = true;
+    }
+    return returnValue;
+  };
+  constructor.prototype.setOptions = function(options) {
+    if (typeof options !== 'object') {
+      options = null;
+    }
+    defaultOptions = resolveOptions(options);
+  };
+  return new constructor();
+})();
+(function() {
+  if (window.jQuery) {
+    (function($) {
+      $.cookies = jaaulde.utils.cookies;
+      var extensions = {
+        cookify: function(options) {
+          return this.each(function() {
+            var i, nameAttrs = ['name', 'id'], name, $this = $(this), value;
+            for (i in nameAttrs) {
+              if (!isNaN(i)) {
+                name = $this.attr(nameAttrs[i]);
+                if (typeof name === 'string' && name !== '') {
+                  if ($this.is(':checkbox, :radio')) {
+                    if ($this.attr('checked')) {
+                      value = $this.val();
+                    }
+                  } else if ($this.is(':input')) {
+                    value = $this.val();
+                  } else {
+                    value = $this.html();
+                  }
+                  if (typeof value !== 'string' || value === '') {
+                    value = null;
+                  }
+                  $.cookies.set(name, value, options);
+                  break;
+                }
+              }
+            }
+          });
+        },
+        cookieFill: function() {
+          return this.each(function() {
+            var n, getN, nameAttrs = ['name', 'id'], name, $this = $(this), value;
+            getN = function() {
+              n = nameAttrs.pop();
+              return !!n;
+            };
+            while (getN()) {
+              name = $this.attr(n);
+              if (typeof name === 'string' && name !== '') {
+                value = $.cookies.get(name);
+                if (value !== null) {
+                  if ($this.is(':checkbox, :radio')) {
+                    if ($this.val() === value) {
+                      $this.attr('checked', 'checked');
+                    } else {
+                      $this.removeAttr('checked');
+                    }
+                  } else if ($this.is(':input')) {
+                    $this.val(value);
+                  } else {
+                    $this.html(value);
+                  }
+                }
+                break;
+              }
+            }
+          });
+        },
+        cookieBind: function(options) {
+          return this.each(function() {
+            var $this = $(this);
+            $this.cookieFill().change(function() { $this.cookify(options); });
+          });
+        }
+      };
+      $.each(extensions, function(i) { $.fn[i] = this; });
+    })(window.jQuery);
+  }
+})();
+/* Toggle If Plugin */
+(function($) { $.fn.toggleIf = function(cond) { return this.each(function() { $(this)[cond ? 'show' : 'hide'](); }); }; })(jQuery);
+//Auto expand plugin
+// (function ($) { $.fn._ie_select = function () { return $(this).each(function () { var a = $(this), p = a.parent(); p.css('position', 'relative'); var o = a.position(), h = a.outerHeight(), l = o.left, t = o.top; $("#" + this.id + "-clone").remove(); var c = a.clone(true); $.data(c, 'element', a); $.data(c, 'ddWidth', a.width() + 2); a.width("auto"); $.data(c, 'ddAutoWidth', a.width()); a.width($.data(c, 'ddWidth')); c.css({ zIndex: 100, height: h, top: t, left: l, position: 'absolute', opacity: 0, width: $.data(c, 'ddWidth') }).attr({ id: this.id + '-clone', name: this.name + '-clone' }).change(function () { c.width($.data(c, 'ddWidth')); if ($.data(c, 'element').val() != $(this).val()) { $.data(c, 'element').val($(this).val()).trigger('change'); } }).mousedown(function () { if ($.data(c, 'ddAutoWidth') > $.data(c, 'ddWidth')) { c.width($.data(c, 'ddAutoWidth')); } }).blur(function () { c.width($.data(c, 'ddWidth')); }); a.before(c).click(function () { c.trigger('click'); }); a.change(function () { if (c.val() != $(this).val()) { c.val($(this).val()).trigger('change'); } c.width($.data(c, 'ddWidth')); }); }); }; if ($.browser.msie) { $('select')._ie_select(); } })(jQuery);
+(function($) {
+  $.fn.jTruncate = function(h) {
+    var i = { length: 300, minTrail: 20, moreText: "more", lessText: "less", ellipsisText: "...", moreAni: "", lessAni: "" };
+    var h = $.extend(i, h);
+    return this.each(function() {
+      obj = $(this);
+      var a = obj.html();
+      if (a.length > h.length + h.minTrail) {
+        var b = a.indexOf(' ', h.length);
+        if (b != -1) {
+          var b = a.indexOf(' ', h.length);
+          var c = a.substring(0, b);
+          var d = a.substring(b, a.length - 1);
+          obj.html(c + '<span class="truncate_ellipsis">' + h.ellipsisText + '</span>' + '<span class="truncate_more">' + d + '</span>');
+          obj.find('.truncate_more').css("display", "none");
+          obj.append('<div class="clearboth">' + '<a href="#" class="truncate_more_link">' + h.moreText + '</a>' + '</div>');
+          var e = $('.truncate_more_link', obj);
+          var f = $('.truncate_more', obj);
+          var g = $('.truncate_ellipsis', obj);
+          e.click(function() {
+            if (e.text() == h.moreText) {
+              f.show(h.moreAni);
+              e.text(h.lessText);
+              g.css("display", "none");
+            } else {
+              f.hide(h.lessAni);
+              e.text(h.moreText);
+              g.css("display", "inline");
+            }
+            return false;
+          });
+        }
+      }
+    });
+  };
+})(jQuery);
+(
+  function(b) {
+    var a;
+    b.fn.jqprint = function(d) {
+      a = b.extend({}, b.fn.jqprint.defaults, d);
+      var c = (this instanceof jQuery) ? this : b(this);
+      if (a.operaSupport && b.browser.opera) {
+        var e = window.open("", "jqPrint-preview");
+        e.document.open();
+        var g = e.document;
+      } else {
+        var f = b("<iframe  />");
+        f.css({ position: "absolute", width: "0px", height: "0px", left: "-600px", top: "-600px" });
+        f.appendTo("body");
+        var g = f[0].contentWindow.document;
+      }
+      if (a.importCSS) {
+        if (!a.ignorePrint && b("link[media=print]").length > 0) {
+          b("link[media=print]").each(function() { g.write("<link type='text/css' rel='stylesheet' href='" + b(this).attr("href") + "' media='print'/>"); });
+        } else {
+          b("link").each(function() {
+            if (!a.ignorePrint || b(this).attr("media") != "print") {
+              g.write("<link type='text/css' rel='stylesheet' href='" + b(this).attr("href") + "'/>");
+            }
+          });
+        }
+      }
+      if (a.cssRules != null) {
+        g.write("<style type='text/css'>@media print{" + a.cssRules + "}</style>");
+      }
+      if (a.printContainer) {
+        g.write(c.outer());
+      } else {
+        c.each(function() { g.write(b(this).html()); });
+      }
+      g.close();
+      (a.operaSupport && b.browser.opera ? e : f[0].contentWindow).focus();
+      setTimeout(function() {
+        (a.operaSupport && b.browser.opera ? e : f[0].contentWindow).print();
+        if (e) {
+          e.close();
+        }
+      }, 1000);
+    };
+    b.fn.jqprint.defaults = { importCSS: true, printContainer: true, operaSupport: true, ignorePrint: false, cssRules: null };
+    jQuery.fn.outer = function() { return b(b("<div></div>").html(this.clone())).html(); };
+  }
+)(jQuery);
+
+/*
+* TipTip
+* Copyright 2010 Drew Wilson
+* www.drewwilson.com
+* code.drewwilson.com/entry/tiptip-jquery-plugin
+*
+* Version 1.3   -   Updated: Mar. 23, 2010
+*
+* This Plug-In will create a custom tooltip to replace the default
+* browser tooltip. It is extremely lightweight and very smart in
+* that it detects the edges of the browser window and will make sure
+* the tooltip stays within the current window size. As a result the
+* tooltip will adjust itself to be displayed above, below, to the left 
+* or to the right depending on what is necessary to stay within the
+* browser window. It is completely customizable as well via CSS.
+*
+* This TipTip jQuery plug-in is dual licensed under the MIT and GPL licenses:
+*   http://www.opensource.org/licenses/mit-license.php
+*   http://www.gnu.org/licenses/gpl.html
+*/
+(function($) {
+  $.fn.tipTip = function(options) {
+    var defaults = { activation: "hover", keepAlive: false, maxWidth: "200px", edgeOffset: 3, defaultPosition: "bottom", delay: 400, fadeIn: 200, fadeOut: 200, attribute: "title", content: false, enter: function() {}, exit: function() {} };
+    var opts = $.extend(defaults, options);
+    if ($("#tiptip_holder").length <= 0) {
+      var tiptip_holder = $('<div id="tiptip_holder" style="max-width:' + opts.maxWidth + ';"></div>');
+      var tiptip_content = $('<div id="tiptip_content"></div>');
+      var tiptip_arrow = $('<div id="tiptip_arrow"></div>');
+      $("body").append(tiptip_holder.html(tiptip_content).prepend(tiptip_arrow.html('<div id="tiptip_arrow_inner"></div>')));
+    } else {
+      var tiptip_holder = $("#tiptip_holder");
+      var tiptip_content = $("#tiptip_content");
+      var tiptip_arrow = $("#tiptip_arrow");
+    }
+    return this.each(function() {
+      var org_elem = $(this);
+      if (opts.content) {
+        var org_title = opts.content;
+      } else {
+        var org_title = org_elem.attr(opts.attribute);
+      }
+      if (org_title != "") {
+        if (!opts.content) {
+          org_elem.removeAttr(opts.attribute);
+        }
+        var timeout = false;
+        if (opts.activation == "hover") {
+          org_elem.hover(function() { active_tiptip() }, function() {
+            if (!opts.keepAlive) {
+              deactive_tiptip();
+            }
+          });
+          if (opts.keepAlive) {
+            tiptip_holder.hover(function() {}, function() { deactive_tiptip() });
+          }
+        } else if (opts.activation == "focus") {
+          org_elem.focus(function() { active_tiptip() }).blur(function() { deactive_tiptip() });
+        } else if (opts.activation == "click") {
+          org_elem.click(function() {
+            active_tiptip();
+            return false;
+          }).hover(function() {}, function() {
+            if (!opts.keepAlive) {
+              deactive_tiptip();
+            }
+          });
+          if (opts.keepAlive) {
+            tiptip_holder.hover(function() {}, function() { deactive_tiptip() });
+          }
+        }
+
+        function active_tiptip() {
+          opts.enter.call(this);
+          tiptip_content.html(org_title);
+          tiptip_holder.hide().removeAttr("class").css("margin", "0");
+          tiptip_arrow.removeAttr("style");
+          var top = parseInt(org_elem.offset()['top']);
+          var left = parseInt(org_elem.offset()['left']);
+          var org_width = parseInt(org_elem.outerWidth());
+          var org_height = parseInt(org_elem.outerHeight());
+          var tip_w = tiptip_holder.outerWidth();
+          var tip_h = tiptip_holder.outerHeight();
+          var w_compare = Math.round((org_width - tip_w) / 2);
+          var h_compare = Math.round((org_height - tip_h) / 2);
+          var marg_left = Math.round(left + w_compare);
+          var marg_top = Math.round(top + org_height + opts.edgeOffset);
+          var t_class = "";
+          var arrow_top = "";
+          var arrow_left = Math.round(tip_w - 12) / 2;
+          if (opts.defaultPosition == "bottom") {
+            t_class = "_bottom";
+          } else if (opts.defaultPosition == "top") {
+            t_class = "_top";
+          } else if (opts.defaultPosition == "left") {
+            t_class = "_left";
+          } else if (opts.defaultPosition == "right") {
+            t_class = "_right";
+          }
+          var right_compare = (w_compare + left) < parseInt($(window).scrollLeft());
+          var left_compare = (tip_w + left) > parseInt($(window).width());
+          if ((right_compare && w_compare < 0) || (t_class == "_right" && !left_compare) || (t_class == "_left" && left < (tip_w + opts.edgeOffset + 5))) {
+            t_class = "_right";
+            arrow_top = Math.round(tip_h - 13) / 2;
+            arrow_left = -12;
+            marg_left = Math.round(left + org_width + opts.edgeOffset);
+            marg_top = Math.round(top + h_compare);
+          } else if ((left_compare && w_compare < 0) || (t_class == "_left" && !right_compare)) {
+            t_class = "_left";
+            arrow_top = Math.round(tip_h - 13) / 2;
+            arrow_left = Math.round(tip_w);
+            marg_left = Math.round(left - (tip_w + opts.edgeOffset + 5));
+            marg_top = Math.round(top + h_compare);
+          }
+          var top_compare = (top + org_height + opts.edgeOffset + tip_h + 8) > parseInt($(window).height() + $(window).scrollTop());
+          var bottom_compare = ((top + org_height) - (opts.edgeOffset + tip_h + 8)) < 0;
+          if (top_compare || (t_class == "_bottom" && top_compare) || (t_class == "_top" && !bottom_compare)) {
+            if (t_class == "_top" || t_class == "_bottom") {
+              t_class = "_top";
+            } else {
+              t_class = t_class + "_top";
+            }
+            arrow_top = tip_h;
+            marg_top = Math.round(top - (tip_h + 5 + opts.edgeOffset));
+          } else if (bottom_compare | (t_class == "_top" && bottom_compare) || (t_class == "_bottom" && !top_compare)) {
+            if (t_class == "_top" || t_class == "_bottom") {
+              t_class = "_bottom";
+            } else {
+              t_class = t_class + "_bottom";
+            }
+            arrow_top = -12;
+            marg_top = Math.round(top + org_height + opts.edgeOffset);
+          }
+          if (t_class == "_right_top" || t_class == "_left_top") {
+            marg_top = marg_top + 5;
+          } else if (t_class == "_right_bottom" || t_class == "_left_bottom") {
+            marg_top = marg_top - 5;
+          }
+          if (t_class == "_left_top" || t_class == "_left_bottom") {
+            marg_left = marg_left + 5;
+          }
+          tiptip_arrow.css({ "margin-left": arrow_left + "px", "margin-top": arrow_top + "px" });
+          tiptip_holder.css({ "margin-left": marg_left + "px", "margin-top": marg_top + "px" }).attr("class", "tip" + t_class);
+          if (timeout) {
+            clearTimeout(timeout);
+          }
+          timeout = setTimeout(function() { tiptip_holder.stop(true, true).fadeIn(opts.fadeIn) }, opts.delay);
+        }
+
+        function deactive_tiptip() {
+          opts.exit.call(this);
+          if (timeout) {
+            clearTimeout(timeout);
+          }
+          tiptip_holder.fadeOut(opts.fadeOut);
+        }
+      }
+    });
+  };
+})(jQuery);
+
+$.fn.fitDialog = function() {
+  if ($(this).parent().height() > $(window).height()) {
+    $(this).height($(window).height() * 0.7);
+    $(this).dialog({ position: "center" });
+  }
+  return $(this);
+}; /*!
+ * headroom.js v0.7.0 - Give your page some headroom. Hide your header until you need it
+ * Copyright (c) 2014 Nick Williams - http://wicky.nillia.ms/headroom.js
+ * License: MIT
+ */
+
+!function(a, b) {
+  "use strict";
+
+  function c(a) { this.callback = a, this.ticking = !1 }
+
+  function d(b) { return b && "undefined" != typeof a && (b === a || b.nodeType) }
+
+  function e(a) {
+    if (arguments.length <= 0)throw new Error("Missing arguments in extend function");
+    var b, c, f = a || {};
+    for (c = 1; c < arguments.length; c++) {
+      var g = arguments[c] || {};
+      for (b in g)f[b] = "object" != typeof f[b] || d(f[b]) ? f[b] || g[b] : e(f[b], g[b]);
+    }
+    return f;
+  }
+
+  function f(a) { return a === Object(a) ? a : { down: a, up: a } }
+
+  function g(a, b) { b = e(b, g.options), this.lastKnownScrollY = 0, this.elem = a, this.debouncer = new c(this.update.bind(this)), this.tolerance = f(b.tolerance), this.classes = b.classes, this.offset = b.offset, this.scroller = b.scroller, this.initialised = !1, this.onPin = b.onPin, this.onUnpin = b.onUnpin, this.onTop = b.onTop, this.onNotTop = b.onNotTop }
+
+  var h = { bind: !!function() {}.bind, classList: "classList" in b.documentElement, rAF: !!(a.requestAnimationFrame || a.webkitRequestAnimationFrame || a.mozRequestAnimationFrame) };
+  a.requestAnimationFrame = a.requestAnimationFrame || a.webkitRequestAnimationFrame || a.mozRequestAnimationFrame, c.prototype = { constructor: c, update: function() { this.callback && this.callback(), this.ticking = !1 }, requestTick: function() { this.ticking || (requestAnimationFrame(this.rafCallback || (this.rafCallback = this.update.bind(this))), this.ticking = !0) }, handleEvent: function() { this.requestTick() } }, g.prototype = {
+    constructor: g,
+    init: function() { return g.cutsTheMustard ? (this.elem.classList.add(this.classes.initial), setTimeout(this.attachEvent.bind(this), 100), this) : void 0 },
+    destroy: function() {
+      var a = this.classes;
+      this.initialised = !1, this.elem.classList.remove(a.unpinned, a.pinned, a.top, a.initial), this.scroller.removeEventListener("scroll", this.debouncer, !1);
+    },
+    attachEvent: function() { this.initialised || (this.lastKnownScrollY = this.getScrollY(), this.initialised = !0, this.scroller.addEventListener("scroll", this.debouncer, !1), this.debouncer.handleEvent()) },
+    unpin: function() {
+      var a = this.elem.classList, b = this.classes;
+      (a.contains(b.pinned) || !a.contains(b.unpinned)) && (a.add(b.unpinned), a.remove(b.pinned), this.onUnpin && this.onUnpin.call(this));
+    },
+    pin: function() {
+      var a = this.elem.classList, b = this.classes;
+      a.contains(b.unpinned) && (a.remove(b.unpinned), a.add(b.pinned), this.onPin && this.onPin.call(this));
+    },
+    top: function() {
+      var a = this.elem.classList, b = this.classes;
+      a.contains(b.top) || (a.add(b.top), a.remove(b.notTop), this.onTop && this.onTop.call(this));
+    },
+    notTop: function() {
+      var a = this.elem.classList, b = this.classes;
+      a.contains(b.notTop) || (a.add(b.notTop), a.remove(b.top), this.onNotTop && this.onNotTop.call(this));
+    },
+    getScrollY: function() { return void 0 !== this.scroller.pageYOffset ? this.scroller.pageYOffset : void 0 !== this.scroller.scrollTop ? this.scroller.scrollTop : (b.documentElement || b.body.parentNode || b.body).scrollTop },
+    getViewportHeight: function() { return a.innerHeight || b.documentElement.clientHeight || b.body.clientHeight },
+    getDocumentHeight: function() {
+      var a = b.body, c = b.documentElement;
+      return Math.max(a.scrollHeight, c.scrollHeight, a.offsetHeight, c.offsetHeight, a.clientHeight, c.clientHeight);
+    },
+    getElementHeight: function(a) { return Math.max(a.scrollHeight, a.offsetHeight, a.clientHeight) },
+    getScrollerHeight: function() { return this.scroller === a || this.scroller === b.body ? this.getDocumentHeight() : this.getElementHeight(this.scroller) },
+    isOutOfBounds: function(a) {
+      var b = 0 > a, c = a + this.getViewportHeight() > this.getScrollerHeight();
+      return b || c;
+    },
+    toleranceExceeded: function(a, b) { return Math.abs(a - this.lastKnownScrollY) >= this.tolerance[b] },
+    shouldUnpin: function(a, b) {
+      var c = a > this.lastKnownScrollY, d = a >= this.offset;
+      return c && d && b;
+    },
+    shouldPin: function(a, b) {
+      var c = a < this.lastKnownScrollY, d = a <= this.offset;
+      return c && b || d;
+    },
+    update: function() {
+      var a = this.getScrollY(), b = a > this.lastKnownScrollY ? "down" : "up", c = this.toleranceExceeded(a, b);
+      this.isOutOfBounds(a) || (a <= this.offset ? this.top() : this.notTop(), this.shouldUnpin(a, c) ? this.unpin() : this.shouldPin(a, c) && this.pin(), this.lastKnownScrollY = a);
+    }
+  }, g.options = { tolerance: { up: 0, down: 0 }, offset: 0, scroller: a, classes: { pinned: "headroom--pinned", unpinned: "headroom--unpinned", top: "headroom--top", notTop: "headroom--not-top", initial: "headroom" } }, g.cutsTheMustard = "undefined" != typeof h && h.rAF && h.bind && h.classList, a.Headroom = g;
+}(window, document);
+
+/*!
+ * headroom.js v0.7.0 - Give your page some headroom. Hide your header until you need it
+ * Copyright (c) 2014 Nick Williams - http://wicky.nillia.ms/headroom.js
+ * License: MIT
+ */
+
+!function(a) {
+  a && (a.fn.headroom = function(b) {
+    return this.each(function() {
+      var c = a(this), d = c.data("headroom"), e = "object" == typeof b && b;
+      e = a.extend(!0, {}, Headroom.options, e), d || (d = new Headroom(this, e), d.init(), c.data("headroom", d)), "string" == typeof b && d[b]();
+    });
+  }, a("[data-headroom]").each(function() {
+    var b = a(this);
+    b.headroom(b.data());
+  }));
+}(window.Zepto || window.jQuery);

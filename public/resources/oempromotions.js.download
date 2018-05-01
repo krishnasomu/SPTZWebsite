@@ -1,0 +1,241 @@
+FBSM.W.zIndx = 1;
+FBSM.W.currentPromo = 0;
+FBSM.W.currentPromoSet = null;
+FBSM.W.advance = new Boolean(true);
+FBSM.W.promoDetailUrl = "promotion-detail.htm?promoId=";
+FBSM.W.initializeOEMPromotions = function () {
+  if (typeof FBSM.W.globalPromoData == 'undefined') {
+    FBSM.W.globalPromoData = { promos: [] };
+  }
+  if (typeof FBSM.W.globalPromoData.promos != 'undefined' && FBSM.W.globalPromoData.promos.length > 0) {
+    $(".fatPromos").show();
+    if (!$(".fatPromos").is(":visible")) {
+      $(".fatPromos").hide();
+      return;
+    }
+    FBSM.W.currentPromoSet = FBSM.W.getPromos("All Brands");
+    //Draw select boxes
+    if (FBSM.W.currentPromoSet.brands.length == 1) {
+      $('.centerPromoBrandSelect').empty();
+      $('.centerPromoBrandShowing').html(FBSM.W.currentPromoSet.brands[0]);
+    }
+    for (var i = 0; i < FBSM.W.currentPromoSet.brands.length; i++) {
+    	$('.centerPromoBrandSelect').append('<li>' + FBSM.W.currentPromoSet.brands[i] + '</li>');
+    }
+    $('.centerPromoBrandSelect li').hover(function() { $(this).addClass('promoListHover'); }, function() { $(this).removeClass('promoListHover'); });
+    $('.centerCurrentPromoCount').html(FBSM.W.currentPromoSet.promos.length);
+    $('.centerCurrentPromo').html("1");
+    FBSM.W.LoadPromo(FBSM.W.currentPromoSet.promos[0], "0", "1", false);
+    FBSM.W.autoAdvance(FBSM.W.currentPromoSet);
+    FBSM.W.setupPromoClickHandlers();
+  } else {
+    $(".fatPromos").hide();
+  }
+};
+FBSM.W.getPromos = function(owner) {
+  var mydata = FBSM.W.globalPromoData;
+  if (owner == 'All Brands') {
+    return mydata;
+  } else {
+    var filtered = { promos: [] };
+    for (var i = 0; i < mydata.promos.length; i++) {
+      if (mydata.promos[i].owner == owner) {
+        filtered.promos.push(mydata.promos[i]);
+      }
+    }
+    return filtered;
+  }
+};
+FBSM.W.setupPromoClickHandlers = function() {
+  $('.centerPromoBrandShowing').click(function() {
+    if ($(this).hasClass('clicked')) {
+      FBSM.W.advance = true;
+      $('.promosBrandSelectList').fadeOut(500);
+      $(this).removeClass('clicked');
+      FBSM.W.updatePauseButton();
+    } else {
+      FBSM.W.advance = false;
+      $(this).removeClass('hover');
+      $(this).addClass('clicked');
+      FBSM.W.updatePauseButton();
+      FBSM.W.zIndx++;
+      $('.promosBrandSelectList').css('z-index', FBSM.W.zIndx);
+      $('.promosBrandSelectList').fadeIn(500);
+    }
+  });
+  //Brand Change
+  $('.centerPromoBrandSelect li').click(function() {
+    $('.centerPromoBrandShowing').removeClass('clicked');
+    $('.centerPromoBrandShowing').html($(this).html());
+    $('.promosBrandSelectList').hide();
+    $('.centerPromoPause').stop();
+    FBSM.W.showLoadingPanel();
+    FBSM.W.currentPromoSet = FBSM.W.getPromos($(this).html());
+    $('.centerCurrentPromoCount').html(FBSM.W.currentPromoSet.promos.length);
+    $('.centerCurrentPromo').html("1");
+    FBSM.W.currentPromo = 0;
+    if (FBSM.W.currentPromoSet.promos.length > 1) {
+      FBSM.W.advance = true;
+      FBSM.W.updatePauseButton();
+    }
+    FBSM.W.LoadPromo(FBSM.W.currentPromoSet.promos[0], "456px", "1", true);
+  });
+  //Forward/Back Click handler
+  $('.centerPromoNext, .centerPromoBack').click(function() {
+    FBSM.W.advance = false;
+    FBSM.W.updatePauseButton();
+    FBSM.W.showLoadingPanel();
+    if ($(this).attr('class') == 'centerPromoBack') {
+      left = '-455px';
+      FBSM.W.currentPromo--;
+    } else {
+      left = '455px';
+      FBSM.W.currentPromo++;
+    }
+    FBSM.W.LoopCheck();
+    FBSM.W.LoadPromo(FBSM.W.currentPromoSet.promos[FBSM.W.currentPromo], left, (FBSM.W.currentPromo + 1), true);
+  });
+
+  //Pause Handler
+  $('.centerPromoPause').click(function() {
+    $('.centerPromoPause').stop();
+    if (FBSM.W.advance) {
+      FBSM.W.advance = false;
+    } else {
+      FBSM.W.advance = true;
+      FBSM.W.showLoadingPanel();
+      FBSM.W.currentPromo++;
+      FBSM.W.LoopCheck();
+      FBSM.W.LoadPromo(FBSM.W.currentPromoSet.promos[FBSM.W.currentPromo], '456px', (FBSM.W.currentPromo + 1), true);
+    }
+    FBSM.W.updatePauseButton();
+  });
+};
+FBSM.W.autoAdvance = function() {
+  if (FBSM.W.currentPromoSet.promos.length > 1) {
+    $('.centerPromoPause').animate({ opacity: 1 }, 6000, function() {
+      if (FBSM.W.advance) {
+        FBSM.W.showLoadingPanel();
+        FBSM.W.currentPromo++;
+        FBSM.W.LoopCheck();
+        FBSM.W.LoadPromo(FBSM.W.currentPromoSet.promos[FBSM.W.currentPromo], '456px', (FBSM.W.currentPromo + 1), true);
+      } else {
+        return;
+      }
+    });
+  }
+};
+FBSM.W.updatePauseButton = function() {
+  //Pause button image state switcher.
+  var src = $('.centerPromoPause').attr("src");
+  $('.centerPromoPause').attr("src", ((FBSM.W.advance) ? src.replace("paused.", "pause.") : src.replace("pause.", "paused.")));
+};
+FBSM.W.showLoadingPanel = function() {
+  //Show black "loading" frame while next frame gets loaded by the browser
+  FBSM.W.zIndx++;
+  $('.centerPromoLoading').css({ 'zIndex': FBSM.W.zIndx, 'opacity': '0.8' });
+};
+FBSM.W.LoopCheck = function() {
+  //Loop if end of array is hit
+  if (FBSM.W.currentPromo >= FBSM.W.currentPromoSet.promos.length) FBSM.W.currentPromo = 0;
+  if (FBSM.W.currentPromo < 0) FBSM.W.currentPromo = FBSM.W.currentPromoSet.promos.length - 1;
+};
+FBSM.W.LoadPromo = function(promo, left, count, animate) {
+  //Load up a new promo and slide it in.
+  if (promo) {
+    FBSM.W.zIndx++;
+    var newpromo = $.create('div', {
+      'style': 'position:absolute;top:0;left:' + left + ';z-index:' + FBSM.W.zIndx + ';',
+      'class': 'centerPromoLayer'
+    });
+    //Load next Promo image and wait until it loads to animate.
+    var img = new Image();
+    $(img).load(function() {
+      newpromo.html(this);
+      newpromo.html('<a href="' + FBSM.W.promoDetailUrl + promo.id + '">' + newpromo.html() + '</a>');
+      $('.centerCurrentPromo:first').html(count);
+      $('.centerPromoViewer:first').append(newpromo);
+      newpromo.animate({ left: 0 }, 300, function() {
+        if (FBSM.W.advance) FBSM.W.autoAdvance();
+        if (animate) $('.centerPromoViewer:first .centerPromoLayer:eq(0)').remove();
+      });
+    }).attr('src', promo.imageUrl);
+    $(".promotionDetailLink").attr("href", FBSM.W.promoDetailUrl + promo.id);
+  }
+};
+FBSM.W.emailAFriendSubmit = function(brand, title) {
+  var data = $("#efPopupForm").serialize() + '&brand=' + brand + '&title=' + title + '&promotionDetailUrl=' + escape(window.location.href);
+  $.ajax({
+    type: 'POST',
+    url: "services/WidgetServices.asmx/EmailAFriend",
+    data: data,
+    dataType: 'xml',
+    contentType: "application/x-www-form-urlencoded",
+    success: function(res) {
+      if ($("response", res).attr("success") == 'true') {
+        if ($("response", res).attr("isValid") == 'false') {
+          var errors = $("#efPopErrorMsg");
+          if (errors.length > 0) {
+            errors.empty();
+            var error = $("validationError", res);
+            errors.html('<div class="ecomm_systemMessageErrorTitle">' + error.attr("name") + '</div>' + '<div class="ecomm_systemMessageErrorText">' + error.attr("errorMessage") + '</div>');
+            errors.css('color', '#ff0000');
+            errors.show();
+            FBSM.C.captchaRefresh('pd-sendToFriend-captcha')
+          }
+        } else {
+          $('#efPopErrorMsg').hide();
+          $('#efPopFormContainer').hide();
+          $('#efPopThankYouMsg').show();
+          $('#efPopupForm')[0].reset();
+          FBSM.C.loadCustomJavascriptParameters("form_submit", "");
+        }
+      } else {
+        var errors = $('#efPopErrorMsg');
+        if (errors.length > 0) {
+          errors.empty();
+          errors.html('<div class="ecomm_systemMessageErrorTitle">Processing Error</div>' + '<div class="ecomm_systemMessageErrorText">' + $("exception", res).attr("message") + '</div>');
+          errors.css('color', '#ff0000');
+          errors.show();
+        }
+      }
+    }
+  });
+};
+FBSM.W.backToEmailForm = function() {
+  $("#efPopErrorMsg").empty();
+  $("#efPopErrorMsg").hide();
+  $("#efPopThankYouMsg").hide();
+  $("#efPopFormContainer").show();
+  $("#ecms_sendToAFriendForm_pop").hide();
+};
+FBSM.W.centerPopup = function(popupSelector) {
+  var scrollToTop = 0;
+  var wrapperBody = $("#ShowcaseWrapper")[0];
+  if (typeof(window.innerWidth) == 'number') {
+    scrollToTop = window.pageYOffset;
+  } else if (document.documentElement && (document.documentElement.clientWidth || document.documentElement.clientHeight)) {
+    scrollToTop = document.body.scrollTop;
+    if (scrollToTop == 0) scrollToTop = document.documentElement.scrollTop;
+  } else if (document.body && (document.body.clientWidth || document.body.clientHeight)) {
+    scrollToTop = document.body.scrollTop;
+    if (scrollToTop == 0) scrollToTop = document.documentElement.scrollTop;
+  }
+  var offsetTop = wrapperBody.offsetTop;
+  var topval = (scrollToTop - offsetTop >= 0) ? scrollToTop - offsetTop : 0;
+  var leftval = Math.round((wrapperBody.clientWidth / 2) - ($(popupSelector).width() / 2));
+  $(popupSelector).css({ "position": "absolute", "top": ((topval + 30) + "px"), "left": ((leftval > 2) ? leftval + "px" : "2px") });
+};
+FBSM.W.SendToFriendModal = function() {
+  FBSM.C.loadCustomJavascriptParameters('promo_send_to_friend_start', 'o');
+  $('#ecms_sendToAFriendForm_modal').dialog({
+    position: { my: "center", at: "center", of: window },
+    width: 650,
+    title: 'Send To Friend'
+  });
+};
+
+$(document).ready(function() {
+  FBSM.W.initializeOEMPromotions();
+  $('#sendToFriend_title_promodetail').on('click', FBSM.W.SendToFriendModal);
+});

@@ -1,0 +1,794 @@
+FBSM.C.currentTabIndex = '1';
+FBSM.C.IDMap = new Object();
+FBSM.C.tireFitmentGuideTireSizeInfo = null;
+FBSM.C.tireFitmentGuideTireSizeInfoIndex = 0;
+FBSM.C.SORT_COLUMN_INDEX = 0;
+FBSM.C.flashObjectCollection = new Object();
+FBSM.C.SearchString = null;
+FBSM.C.RTP_JSON = null;
+FBSM.C.serviceDetailLocations = null;
+FBSM.C.unitSearch = "";
+FBSM.C.defaultSortOrder = "";
+FBSM.C.displayRequestQuote = true;
+FBSM.C.packageSubtotal = 0.0;
+FBSM.C.OmnitureHistory = new Array();
+
+FBSM.C.loadCustomJavascriptParameters = function(val, type) {
+  if (typeof s != "undefined") {
+    if (val != "checkout_tab_shipping" || s.pageName != "checkout shipping") {
+      if (val == "form_submit" || FBSM.C.OmnitureHistory.length == 0 || FBSM.C.OmnitureHistory[FBSM.C.OmnitureHistory.length - 1] != val) {
+        if (val == "form_submit") {
+          FBSM.C.OmnitureHistory.pop();
+        } else {
+          FBSM.C.OmnitureHistory.push(val);
+        }
+        $.ajax({
+          type: "POST",
+          url: "/Services/WidgetServices.asmx/getAjaxParams",
+          data: "command=" + val + "&type=" + type,
+          dataType: 'script',
+          contentType: "application/x-www-form-urlencoded"
+        });
+        FBSM.C.storeOmnitureEvars();
+      }
+    }
+  }
+};
+FBSM.C.loadCustomJavascriptParametersFromSource = function(script) {
+  if (typeof s != "undefined") {
+    $.ajax({
+      type: "POST",
+      url: "Services/WidgetServices.aspx",
+      data: {
+        "action": "getAjaxParamScript",
+        "script": script
+      },
+      dataType: 'script',
+      contentType: "application/x-www-form-urlencoded"
+    });
+    FBSM.C.storeOmnitureEvars();
+  }
+};
+FBSM.C.storeOmnitureEvars = function() {
+  if (typeof s != "undefined") {
+    var data = new Array(51);
+    var hasResults = false;
+    for (i = 0; i < 51; i++) {
+      if (typeof s["eVar" + i.toString()] != "undefined") {
+        data[i] = s["eVar" + i.toString()].replace(/\|/g, "-");
+        hasResults = true;
+      } else {
+        data[i] = "";
+      }
+    }
+    if (hasResults) {
+      $.ajax({
+        type: "POST",
+        url: "Services/WidgetServices.aspx",
+        data: {
+          "action": "storeEvars",
+          "evars": data.join("|")
+        },
+        contentType: "application/x-www-form-urlencoded",
+        success: function(res) {}
+      });
+    }
+  }
+};
+FBSM.C.captchaRefresh = function(CaptchaId) {
+  if ($("img[id='" + CaptchaId + "']").length > 0) {
+    var date = new Date();
+    $("img[id='" + CaptchaId + "']").attr("src", $("img[id='" + CaptchaId + "']").attr("src").replace(/\&dt=\d*/ig, "") + "&dt=" + date.getTime());
+  }
+};
+FBSM.C.showInfoDialog = function(body, title, width, height, dialogButtons) {
+  if (dialogButtons == null) {
+    dialogButtons = { Ok: function() { $(this).dialog('destroy'); } };
+  }
+  if (body === "") body = "Success";
+  if ($.browser.msie) {
+    width = width.toString().replace("px", "");
+    height = height.toString().replace("px", "");
+  }
+  var $variantdialog = $('<div></div>')
+    .html(body)
+    .css({ 'text-align': 'left' })
+    .dialog({
+      title: title,
+      modal: true,
+      width: width,
+      height: height,
+      buttons: dialogButtons,
+      open: function(event, ui) {
+        $(this).parent().keydown(function(e) {
+          $variantdialog.dialog('close');
+          e.preventDefault();
+        });
+        var dialog = $(event.target).parents(".ui-dialog.ui-widget");
+        var buttons = dialog.find(".ui-dialog-buttonpane").find("button");
+        if (buttons.length > 0) {
+          $(buttons[0]).wrap('<span class="secondary-button" />');
+          if (buttons.length > 1) {
+            $(buttons[1]).wrap('<span class="primary-button" />');
+          }
+        }
+      },
+      close: function() {
+        $(this).dialog("destroy");
+      }
+    });
+};
+FBSM.C.clearFormElements = function(collection, labels) {
+	$.each(collection, function (i, row) {
+    if ($.inArray(row.id, labels) != -1) $(row).val("");
+  });
+};
+FBSM.C.buildXmlPopupMessage = function(res, collection, labels, buttons) {
+  var output = "";
+  var title = "";
+  if ($("validationError", res).length > 0) {
+    output += "<ul>";
+    $("validationError", res).each(function() {
+      output += "<li>" + $(this).attr("name") + ": " + $(this).attr("errorMessage") + "</li>";
+    });
+    title = "Validation Error";
+    FBSM.C.showInfoDialog(output, title, 400, "auto", buttons);
+    return false;
+  } else {
+    if ($("validationResults", res).length > 0 && $("validationResults", res).attr("isValid") == "true") {
+      //server error
+      title = "Error";
+      output = "A server error occurred while processing request.";
+      FBSM.C.showInfoDialog(output, title, 400, "auto", buttons);
+      return false;
+    } else {
+      if ($("response", res).length > 0) {
+        $("response", res).each(function() {
+          output = $(this).text();
+          return false;
+        });
+      }
+      title = "Success";
+      if (output == "") {
+        title = "Email(s) Sent";
+        output = "Thank you for your interest in our products.  Your email(s) have been sent.";
+      }
+      if (collection != null) {
+        FBSM.C.clearFormElements(collection, labels);
+        FBSM.C.captchaRefresh(collection.parent().find(".pd-captcha").attr("id"));
+      }
+      FBSM.C.showInfoDialog(output, title, 400, "auto", buttons);
+      return true;
+    }
+  }
+}; 
+FBSM.C.getAssetAdwords = function(responseXml, modal, assetType) {
+  $.ajax({
+    type: "POST",
+    url: "Services/WidgetServices.aspx",
+    data: {
+      "action": 'getAssetAdword',
+      "assetType": assetType == '' ? responseXml.attr('assetType') : assetType,
+    },
+    dataType: 'html',
+    contentType: "application/x-www-form-urlencoded",
+    success: function (adwordRes) {
+        if (adwordRes && adwordRes != "" && adwordRes.length != adwordRes.indexOf("?>") + 2) {
+            var adwordXml = $("adword", $.parseXML(adwordRes));
+            $(modal).append($(adwordXml).find('google').text());
+            $(modal).append($(adwordXml).find('bing').text());
+        }
+    }
+  });
+};
+FBSM.C.createViewMoreReveal = function(options) {
+  var defaults = {
+    startHeight: 400,
+    duration: 800
+  };
+  var o = $.extend(defaults, options);
+  return function() {
+    var el = $(this);
+    if ((el.outerHeight() - (o.startHeight + 20)) > 0) {
+      el.after('<div class="reveal"><a href="javascript:void(0);" data-state="collapsed">View More</a></div>')
+        .wrap('<div class="reveal-wrapper" />')
+        .parents('.reveal-wrapper')
+        .css({ height: o.startHeight + 10, overflow: "hidden" });
+
+      el.parents('.reveal-wrapper').next('.reveal').click(function() {
+        el.parents('.reveal-wrapper')
+          .css({ overflow: "visible" })
+          .animate({ 'height': el.outerHeight() }, o.duration, function() {
+            $(this).next('.reveal').remove();
+          });
+      });
+    }
+  };
+};
+
+String.prototype.addSlashes = function() {
+  return this.replace(/\\/g, '\\\\').
+    replace(/\u0008/g, '\\b').
+    replace(/\t/g, '\\t').
+    replace(/\n/g, '\\n').
+    replace(/\f/g, '\\f').
+    replace(/\r/g, '\\r').
+    replace(/'/g, '\\\'').
+    replace(/"/g, '\\"');
+};
+
+FBSM.C.doHourglass = function() {
+  var f = document.getElementById('endeavor_searchbox');
+  if (f && f.searchProducts && typeof defaultString != "undefined") {
+    var q = f.searchProducts;
+    if ((q.value.trim() == defaultString) || (q.value.trim() == '')) {
+      return false;
+    } else {
+      document.body.style.cursor = 'wait';
+    }
+    f.searchKeywordLookupId.value = '';
+    f.searchKeywordLookupName.value = '';
+  } else {
+    //document.body.style.cursor = 'wait';
+    return false;
+  }
+  return true;
+};
+
+FBSM.C.escapeHTML = function(val) {
+  return val.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+};
+
+FBSM.C.loadingDialogOptions = function(el) {
+  return {
+    dialogClass: "pd-loading-msg",
+    closeOnEscape: false,
+    draggable: false,
+    autoOpen: false,
+    resizable: false,
+    width: 40,
+    height: 40,
+    position: { my: "center", at: "center", of: window },
+    focus: function(e, i) {
+      $(el).parent().css("width", "40px");
+      $(".pd-loading-msg").css("padding", "0").css("border", "0").find(".ui-dialog-titlebar").hide();
+      $(this).attr("style", "padding:0;height:40px;width:40px;overflow:hidden;").dialog("option", "position", "center");
+    }
+  };
+};
+FBSM.C.getCouponPrint = function(couponId) {
+  var cssFiles = document.getElementsByTagName('link');
+  var width = 400;
+  var height = 200;
+  var viewer = window.open('', 'viewer', 'toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=' + width + ',height=' + height + ',left=200,top=50');
+  viewer.document.open();
+  viewer.document.write('<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n');
+  viewer.document.write('<html id=\"couponPopUp\">\n');
+  viewer.document.write('<head>\n');
+  viewer.document.write('<title>Coupon</title>\n');
+  for (var x = 0; x < cssFiles.length; x++) {
+    viewer.document.write('<link rel=\"stylesheet\" type=\"text/css\" href=\"' + cssFiles[x].href + '\"/>\n');
+  }
+  viewer.document.write('</head>\n');
+  viewer.document.write('<body leftmargin=\"0\" topmargin=\"0\" marginwidth=\"0\" marginheight=\"0\" class=\"couponDisplayPopup\">\n');
+  viewer.document.write('<div class=\"couponPrint\">\n');
+  viewer.document.write($("#" + couponId).html() + '\n');
+  viewer.document.write('</div>\n');
+  viewer.document.write('<div class=\"couponControls\"><input class=\"ecomm_button\" type=\"button\" name=\"print\" value=\"Print\" onClick=\"window.print()\"><input class=\"ecomm_button\" type=\"button\" name=\"close\" value=\"Close\" onClick=\"window.close()\"></div>\n');
+  viewer.document.write('</body>\n');
+  viewer.document.write('</html>\n');
+  FBSM.C.loadCustomJavascriptParametersFromSource('s.linkTrackVars="prop18,prop19";s.linkTrackEvents="";s.prop18={@getEvar25};s.prop19="' + $("#" + couponId + " .assetSubTitle").html().addSlashes() + '";');
+  viewer.document.close();
+};
+FBSM.C.getGalleryDisplayImg = function(imgSrc) {
+  if ($('#FB_imageLoader').length == 0) {
+    $('<div id="FB_imageLoader" />').appendTo('body');
+  }
+  var img = new Image();
+  $(img).load(function() {
+    $('#FB_imageLoader').append(this);
+    FBSM.C.initGalleryPopUp(this, imgSrc);
+  }).attr('src', imgSrc);
+};
+
+FBSM.C.initGalleryPopUp = function(pic, src) {
+  var cssString = '';
+  var cssFiles = document.getElementsByTagName('link');
+  for (var x = 0; x < cssFiles.length; x++) {
+    cssString += '<link rel="stylesheet" type="text/css" href="' + cssFiles[x].href + '"/>';
+  }
+
+  var viewer = window.open('', 'viewer', 'toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=no,resizable=no,width=' + (pic.width + 40) + ',height=' + (pic.height + 60) + ',left=200,top=50');
+  viewer.document.open();
+  viewer.document.write('<html><head><title>Gallery</title>' + cssString + '</head><body class="galleryDisplayPopup"><table class="galleryDisplay_tbl" align="center" width="' + pic.width + '" border="0" cellspacing="10" cellpadding="0"><tr class="galleryDisplay_tblRow"><td class="galleryDisplay_tblCell" align="center" valign="top"><image src="' + src + '"/></td></tr><tr class="galleryDisplay_tblRow"><td class="galleryDisplayControls_tblCell" align="right" valign="middle"><input class="ecomm_button" type="button" name="close" value="Close" onClick="window.close()"></td></tr></table></body></html>');
+  viewer.document.close();
+};
+
+FBSM.C.popUp = function(url) {
+  day = new Date();
+  id = day.getTime();
+  eval("page" + id + " = window.open('" + url + "', '" + id + "', 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width=502,height=425,left = 257,top = 179');");
+};
+
+FBSM.C.writeFlashObjects = function() {
+  if (FBSM.C.flashObjectCollection) for (var tag in FBSM.C.flashObjectCollection) FBSM.C.flashObjectCollection[tag].write(tag);
+};
+
+FBSM.C.validateForm = function(form, rules, options) {
+  var validators = FBSM.C.validateForm.validators = {
+    required: function(input) {
+      return $(input).val() && $(input).val() !== "";
+    },
+    email: function(input) {
+      return $(input).val().match(/^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$/i);
+    },
+    number: function(input) {
+      return $(input).val().length > 0;
+    }
+  };
+
+  var messages = FBSM.C.validateForm.messages = {
+    required: "This field is required.",
+    email: "A valid email is required.",
+    number: "A valid integer number is required."
+  };
+  var defaults = {
+    errorMsgClass: 'omg-bbq-error',
+    showMessages: true,
+    onInvalid: function(form, input, msg, errorClass) {
+      var prevError = $(input).nextAll('.' + errorClass);
+      if (prevError.length) prevError.remove();
+      $(input).after($('<span>', { 'class': errorClass }).text(msg));
+      $(input).css({ 'border': '1px solid red' });
+    },
+    onValid: function(form, input, errorClass) {
+      var prevError = $(input).nextAll('.' + errorClass);
+      if (prevError.length) prevError.remove();
+      $(input).attr('style', '');
+    },
+    debug: false
+  };
+
+  var o = $.extend(defaults, options);
+
+  return function() {
+    var valid = true;
+    $.map(rules, function(opts, input) {
+      var inputs = $(form).find(input);
+      if (!inputs.length) inputs = $(input);
+      if (inputs.length > 0) {
+        inputs.each(function(i, el) {
+          var el = $(el);
+          $.each(opts, function(i, rule) {
+            if (!validators[rule](el)) {
+              var msg = o.showMessages ? messages[rule] : false;
+              o.onInvalid(form, el, msg, o.errorMsgClass);
+              valid = false;
+            } else {
+              o.onValid(form, el, o.errorMsgClass);
+            }
+          });
+        });
+      }
+    });
+    return o.debug ? false : valid;
+  };
+};
+
+/* Given a element collection, loop through and build a formatted post object */
+FBSM.C.buildPostData = function(collection, labels) {
+  var output = "";
+  var label = "";
+  $.each(collection, function(i, row) {
+    label = labels[row.id];
+    if (label != null && typeof label != "undefined") {
+      if (output != "") output += "&";
+      output += label + "=" + encodeURIComponent(row.value);
+    }
+  });
+  return output;
+};
+
+//Added for tracking ecommerce data, which is generated in a dynamic page load on the old checkout.
+FBSM.C.trackGoogleAnalytics = function(pageToTrack) {
+  if (typeof _gaq != "undefined") {
+    if (pageToTrack != "") _gaq.push(['_trackPageview', pageToTrack]);
+
+    //If tracking info is present, use it
+    if (typeof FBSM.C.AddItems != "undefined" && typeof FBSM.C.AddTrans != "undefined") {
+      _gaq.push(FBSM.C.AddTrans);
+      for (i = 0; i < FBSM.C.AddItems.length; i++) {
+        _gaq.push(FBSM.C.AddItems[i]);
+      }
+      _gaq.push(['_trackTrans']);
+    }
+  } else if (typeof ga != "undefined") {
+    if (pageToTrack != "") ga('send', 'pageview', pageToTrack);
+
+    //If tracking info is present, use it
+    if (typeof FBSM.C.AddItems != "undefined" && typeof FBSM.C.AddTrans != "undefined") {
+      ga('ecommerce:addTransaction', {
+        'id': FBSM.C.AddTrans[1],
+        'affiliation': FBSM.C.AddTrans[2],
+        'revenue': FBSM.C.AddTrans[3],
+        'shipping': FBSM.C.AddTrans[5],
+        'tax': FBSM.C.AddTrans[4]
+      });
+      for (i = 0; i < FBSM.C.AddItems.length; i++) {
+        ga('ecommerce:addItem', {
+          'id': FBSM.C.AddItems[i][1],
+          'name': FBSM.C.AddItems[i][3],
+          'sku': FBSM.C.AddItems[i][2],
+          'category': FBSM.C.AddItems[i][4],
+          'price': FBSM.C.AddItems[i][5],
+          'quantity': FBSM.C.AddItems[i][6]
+        });
+      }
+      ga('ecommerce:send');
+    }
+  }
+};
+
+FBSM.C.ContactModal = function(locationId) {
+  FBSM.C.loadCustomJavascriptParametersFromSource('s.pageName="Quote by Phone";s.eVar32=s.pageName;');
+  $.ajax({
+    url: "services/dataprovider.aspx",
+    data: {
+      action: "getcontactmodal",
+      locationId: locationId
+    },
+    success: function(data) {
+      $("<div></div>").html(data).dialog({
+        title: "Quote by Phone",
+        modal: true,
+        width: "550px",
+        open: function() {}
+      });
+    }
+  });
+};
+
+FBSM.C.QuoteGetRegions = function(country, region) {
+  $.ajax({
+    type: 'POST',
+    url: "Services/QuoteServices.aspx?action=getregionsforcountry",
+    data: { "country": country },
+    dataType: "html",
+    contentType: "application/x-www-form-urlencoded",
+    success: function(html) {
+      var parent = $("#tf-raq-region").parent(),
+        tabIndex = $("#tf-raq-region").attr("tabindex");
+      if (tabIndex <= 0) {
+        tabIndex = 8;
+      }
+      $("#tf-raq-region").remove();
+      parent.append("<select id='tf-raq-region' tabindex=\"" + tabIndex + "\">" + html + "</select>");
+      if (typeof (region) != "undefined") {
+        if (!$('#tf-raq-region').val()) {
+          $('#tf-raq-region').val(region);
+        }
+      }
+    }
+  });
+};
+
+FBSM.C.stripHtml = function(html) {
+  return $("<div/>").html(html).text();
+};
+
+FBSM.C.addDays = function(date, i) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + i);
+};
+FBSM.C.isDateValid = function(date, locationId) {
+  var d = $.datepicker.formatDate("mm/dd/yy", date);
+  return (date != null && date > Date.now() && ($.inArray(d, locationInfo[locationId].holidays) == -1) && ($.inArray(d, locationExistingAppts) == -1) && ($.inArray(date.getDay(), locationInfo[locationId].daysOfWeek) != -1));
+};
+
+FBSM.C.formatPrice = function(price, showFree) {
+  if (price == 0 && typeof (showFree) != "undefined" && showFree) {
+    return "Free!";
+  }
+  var n = parseFloat(price),
+    i = parseInt(n = Math.abs(n).toFixed(2)) + '',
+    j = ((j = i.length) > 3) ? j % 3 : 0;
+  return '$' + ((n < 0) ? '-' : '') + (j ? i.substr(0, j) + ',' : '') + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1,") + ('.' + Math.abs(n - i).toFixed(2).slice(2));
+};
+
+FBSM.C.showPromoDialog = function(promoId) {
+  $("#loadingMsg").dialog("open");
+  $.ajax({
+    url: "Services/ProductDetailServices.aspx",
+    data: {
+      "action": "loadPromotion",
+      "promoId": promoId
+    },
+    type: "POST",
+    dataType: "json",
+    success: function(res) {
+      $("#loadingMsg").dialog("close");
+      var btns = {
+        "View Full Page": function() {
+          window.location.href = res.url;
+        },
+        "Close": function() {
+          $(this).dialog("close");
+        }
+      };
+      if (res.html == "") {
+        res.html = "We're sorry, this promotion has expired";
+        btns = {
+          "Close": function() {
+            $(this).dialog("close");
+          }
+        };
+      }
+      if ($("#pd-promo-dialog").length == 0) {
+        $("body").append("<div style='display:none;text-align:left' id='pd-promo-dialog' title='Promotions'></div>");
+      } else {
+        $("#pd-promo-dialog").dialog("close");
+      }
+      $("#pd-promo-dialog").html(res.html).dialog({
+        autoOpen: true,
+        width: 600,
+        modal: false,
+        resizable: false,
+        position: 'center',
+        open: function() {
+          $(this).fitDialog();
+        },
+        close: function() {
+          $(this).dialog('destroy');
+        },
+        buttons: btns
+      });
+    },
+    error: function(a, b, c) {
+      $("#loadingMsg").dialog("close");
+    }
+  });
+};
+FBSM.C.addToCart = function(itemsToAdd) {
+  $("#loadingMsg").dialog("open");
+  if (!FBSM.C.hasEnhancedCheckout) {
+    //Build non-enhanced string
+    window.location.href = "viewcart.htm?" + itemsToAdd;
+  } else {
+    $.ajax({
+      type: "POST",
+      url: "Services/ShopCart.aspx",
+      data: "cart" + itemsToAdd,
+      dataType: "html",
+      contentType: "application/x-www-form-urlencoded",
+      success: function(res) {
+        $("#loadingMsg").dialog("close");
+        var qtyPrice = res.split("|");
+        if (qtyPrice.length >= 3) {
+          var $qty = $('.cart-widget-qty');
+          var $price = $('.cart-widget-price');
+          var $itemLbl = $('.cart-widget-itemLabel');
+          if ($qty.length > 0 && $price.length > 0 && $itemLbl.length > 0) {
+            $qty.html(qtyPrice[0]);
+            $price.html(qtyPrice[1]);
+            $itemLbl.html("Item" + ((qtyPrice[0] == "1") ? "" : "s"));
+            if (typeof FBSM.W != "undefined" && typeof FBSM.W.buildShippingInfo != "undefined") {
+              FBSM.W.buildShippingInfo($price.html().replace(/[,$]*/g, ""));
+            }
+          }
+        }
+        var ariReturnUrl = $.trim(qtyPrice[3]) != "" ? "?arireturnurl=" + qtyPrice[3] : "";
+        var dialogButtons = [
+          {
+            "text": "View Cart + Checkout",
+            "id": "addedCheckout",
+            "css": {
+              "font-size": "inherit",
+              "width": "auto"
+            },
+            "click": function() {
+              window.location.href = "cart.htm" + ariReturnUrl;
+            }
+          },
+          {
+            "text": "Continue Shopping",
+            "id": "addContinue",
+            "css": {
+              "font-size": "inherit",
+              "width": "auto"
+            },
+            "click": function() {
+              $(this).dialog('close');
+            }
+          }
+        ];
+        FBSM.C.showInfoDialog("Your selection was successfully added to the cart.", "Item Added to Cart", 400, "auto", dialogButtons);
+      },
+      error: function(a, b, c) {
+        $("#loadingMsg").dialog("close");
+        FBSM.C.showInfoDialog("A server error occurred while processing request.", "Error", 400, "auto", null);
+      }
+    });
+  }
+  $("#loadingMsg").dialog("close");
+};
+FBSM.C.InitToolTips = function() {
+  $('.help-speed-rating').tipTip({
+    content: $('#tooltip-speed-rating').html(),
+    defaultPosition: 'left',
+    maxWidth: '400px'
+  });
+  $('.help-utqg').tipTip({
+    content: $('#tooltip-utqg').html(),
+    defaultPosition: 'left',
+    maxWidth: '400px'
+  });
+  $('.help-service-description').tipTip({
+    content: $('#tooltip-service-description').html(),
+    defaultPosition: 'left',
+    maxWidth: '400px'
+  });
+  $('.help-load-range').tipTip({
+    content: $('#tooltip-load-range').html(),
+    defaultPosition: 'left',
+    maxWidth: '400px'
+  });
+  $('.help-load-index').tipTip({
+    content: $('#tooltip-load-index').html(),
+    defaultPosition: 'left',
+    maxWidth: '400px'
+  });
+  $('.help-tread-depth').tipTip({
+    content: $('#tooltip-tread-depth').html(),
+    defaultPosition: 'left',
+    maxWidth: '400px'
+  });
+}
+
+$(document).ready(function() {
+  var locSelectors = [
+    '#storeLocations',
+    '#service-detail-locations',
+    '#service-list-locations',
+    '.ecomm_selectBox.cmbLocations'
+  ];
+
+  var locInputs = [
+    '#currentLocationId',
+    '#pd-currentLocationId'
+  ];
+
+  $('body').on('sft:locator:locationselected', function(e, locId) {
+    $(locInputs.join(',')).each(function(i) {
+      var input = $(this);
+      if (input.val() != locId) {
+        input.val(locId.toString(10));
+
+        if (input.attr('id') === 'currentLocationId') {
+          FBSM.C.loadRealTimePrices(input.val(), FBSM.C.showRealTimePrices, false);
+        }
+      }
+    });
+
+    $(locSelectors.join(',')).each(function() {
+      var sel = $(this);
+
+      sel.find('option').each(function(i) {
+        var opt = $(this);
+        var val = opt.val().toString(10);
+        if (val === locId) {
+          sel.val(locId);
+          sel.trigger("change");
+        }
+      });
+    });
+  });
+
+  if (window.location.href.indexOf("asset.htm?asset=ContactUsThankYou") > -1) {
+    FBSM.C.loadCustomJavascriptParametersFromSource('s.linkTrackVars="events,eVar7,eVar37,prop27";s.linkTrackEvents="event5";s.events="event5";s.eVar7="Lead: Contact Form";s.prop27={@siteId};s.eVar37=s.prop27;');
+    FBSM.C.getAssetAdwords('', $('body'), 'ContactUsThankYou');
+  }
+
+  FBSM.C.writeFlashObjects();
+
+  if (FBSM.C.SearchString != null && $("#searchProducts").length > 0) {
+    if (typeof defaultString != "undefined") {
+      defaultString = FBSM.C.SearchString;
+    }
+    $("#searchProducts").val(FBSM.C.SearchString);
+  }
+
+  if ($("#ie-message").length == 1) {
+    $("body").prepend($("#ie-message"));
+    $("#ie-message-wrapper").remove();
+    $("#hideIE6Message").click(function() {
+      $.ajax({
+        type: 'POST',
+        url: 'Services/WidgetServices.aspx',
+        data: 'action=nobother',
+        dataType: "html",
+        contentType: "application/x-www-form-urlencoded",
+        success: function(response) {
+          $("#ie-message").remove();
+        }
+      });
+    });
+  }
+
+  $("#hours-modal").dialog({
+    autoOpen: false,
+    draggable: true,
+    modal: true,
+    title: "Hours of Operation",
+    width: 260,
+    resizable: true,
+    closeOnEscape: true
+  });
+
+  $(".hours-modal-trigger", "#multiLocationFooter").click(function() {
+    $("#hours-modal tbody").html($(this).parents(".footerAddressBlock").find(".store-hours tbody").html());
+    $("#hours-modal").dialog("open");
+    return false;
+  });
+
+  $("#couponDialog").dialog({
+    autoOpen: false,
+    draggable: true,
+    modal: true,
+    width: 500,
+    resizable: true,
+    closeOnEscape: true
+  });
+
+  if ($(".cpnOpenDialog", "#ecms_coupons").length > 0) {
+    $("#couponDialog").dialog("option", "title", $(".cpnOpenDialog .assetSubTitle", "#ecms_coupons").html());
+    $("#couponDialog").html('<div style="position:relative;padding-bottom:30px;"><div id="ecms_coupons">' + $(".cpnOpenDialog", "#ecms_coupons").html() + '</div></div>');
+    $("#couponDialog").find(".couponStoreName, .assetSubTitle").hide();
+    $("#couponDialog").find(".itemShortDescription").css("text-align", "justify");
+    $("#couponDialog").dialog("open");
+  }
+
+  if ($("#frmServiceRequest, #rtpModalFull, #service-list-locations, #service-detail, #ariPartStream").length > 0) {
+    /* Build loading dialog */
+    $("#loadingMsg").dialog(FBSM.C.loadingDialogOptions("#loadingMsg"));
+  }
+
+  if ($('div.home-inventory-scroller').length > 0) {
+    $('div.home-inventory-scroller').serialScroll({
+      items: 'div.scrollsection',
+      step: 1,
+      jump: false,
+      duration: 1250,
+      constant: false
+    });
+
+    if ($('div.home-inventory-scroller div.scrollsection').length <= 1)
+      $('.home-inv-back, .home-inv-more').css({ 'visibility': 'hidden' });
+
+    $('.home-inv-back').click(function() {
+      $('div.home-inventory-scroller').trigger('prev');
+    });
+    $('.home-inv-more').click(function() {
+      $('div.home-inventory-scroller').trigger('next');
+    });
+  }
+
+  if (window.location.protocol == "http:") {
+    $(window).bind('hashchange', function() {
+      $.ajax({
+        type: "POST",
+        url: "services/WidgetServices.aspx",
+        data: {
+          "action": "setlastpage",
+          "lPage": window.location.href
+        },
+        dataType: "text"
+      });
+    });
+    if (window.location.hash != "") {
+      $(window).trigger("hashchange");
+    }
+  }
+
+  if($("#tooltip-utqg").length > 0) {
+    FBSM.C.InitToolTips();
+  }
+});

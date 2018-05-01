@@ -1,0 +1,1010 @@
+FBSM.TF.tfgWrappers = [
+  {
+    //Selectors
+    "class": ".tireFitment_tfg",
+    "tfg_year": ".tireFitment_tfg #tireFitmentYearSelectTFG",
+    "tfg_make": ".tireFitment_tfg #tireFitmentMakeSelectTFG",
+    "tfg_model": ".tireFitment_tfg #tireFitmentModelSelectTFG",
+    "tfg_style": ".tireFitment_tfg #tireFitmentStyleSelectTFG",
+    "tfg_size": ".tireFitment_tfg #tireFitmentSizeSelectTFG",
+    "tfg_type": ".tireFitment_tfg #tireFitmentTypeSelectTFG",
+    "tfg_submit": ".tireFitment_tfg #tireFitmentSubmitTFG",
+    "tfg_loading": ".tireFitment_tfg .loadingIndicator",
+    "tfg_mini": "#miniTireFitmentTFG",
+    //Fitment Objects
+    "checkCookieOnLoad": true,
+    "refine": false,
+    "tf_YearList": new Object(),
+    "tf_MakeList": new Object(),
+    "tf_ModelList": new Object(),
+    "tf_StyleList": new Object(),
+    "tf_SizeList": new Object(),
+    "tf_WidgetSelection": new Object()
+  },
+  {
+    //Selectors
+    "class": ".tireFitment_refinement",
+    "tfg_year": ".tireFitment_refinement #tireFitmentYearSelectRefinement",
+    "tfg_make": ".tireFitment_refinement #tireFitmentMakeSelectRefinement",
+    "tfg_model": ".tireFitment_refinement #tireFitmentModelSelectRefinement",
+    "tfg_style": ".tireFitment_refinement #tireFitmentStyleSelectRefinement",
+    "tfg_size": ".tireFitment_refinement #tireFitmentSizeSelectRefinement",
+    "tfg_type": ".tireFitment_refinement #tireFitmentTypeSelectRefinement",
+    "tfg_submit": ".tireFitment_refinement #tireFitmentSubmitRefinement",
+    "tfg_loading": ".tireFitment_refinement .loadingIndicator",
+    "tfg_mini": "#miniTireFitmentRefinement",
+    //Fitment Objects
+    "checkCookieOnLoad": true,
+    "refine": true,
+    "tf_YearList": new Object(),
+    "tf_MakeList": new Object(),
+    "tf_ModelList": new Object(),
+    "tf_StyleList": new Object(),
+    "tf_SizeList": new Object(),
+    "tf_WidgetSelection": new Object()
+  },
+  {
+    //Selectors
+    "class": ".tireFitment_right",
+    "tfg_year": ".tireFitment_right #tireFitmentYearSelectRight",
+    "tfg_make": ".tireFitment_right #tireFitmentMakeSelectRight",
+    "tfg_model": ".tireFitment_right #tireFitmentModelSelectRight",
+    "tfg_style": ".tireFitment_right #tireFitmentStyleSelectRight",
+    "tfg_size": ".tireFitment_right #tireFitmentSizeSelectRight",
+    "tfg_type": ".tireFitment_right #tireFitmentTypeSelectRight",
+    "tfg_submit": ".tireFitment_right #tireFitmentSubmitRight",
+    "tfg_loading": ".tireFitment_right .loadingIndicator",
+    "tfg_mini": "#miniTireFitmentRight",
+    //Fitment Objects
+    "checkCookieOnLoad": true,
+    "refine": false,
+    "tf_YearList": new Object(),
+    "tf_MakeList": new Object(),
+    "tf_ModelList": new Object(),
+    "tf_StyleList": new Object(),
+    "tf_SizeList": new Object(),
+    "tf_WidgetSelection": new Object()
+  },
+  {
+    //Selectors
+    "class": ".tireFitment_main",
+    "tfg_year": ".tireFitment_main #tireFitmentYearSelect",
+    "tfg_make": ".tireFitment_main #tireFitmentMakeSelect",
+    "tfg_model": ".tireFitment_main #tireFitmentModelSelect",
+    "tfg_style": ".tireFitment_main #tireFitmentStyleSelect",
+    "tfg_size": ".tireFitment_main #tireFitmentSizeSelect",
+    "tfg_type": ".tireFitment_main #tireFitmentTypeSelect",
+    "tfg_submit": ".tireFitment_main #tireFitmentSubmit",
+    "tfg_loading": "",
+    "tfg_mini": "#miniTireFitment",
+    //Fitment Objects
+    "checkCookieOnLoad": false,
+    "refine": false,
+    "tf_YearList": new Object(),
+    "tf_MakeList": new Object(),
+    "tf_ModelList": new Object(),
+    "tf_StyleList": new Object(),
+    "tf_SizeList": new Object(),
+    "tf_WidgetSelection": new Object()
+  },
+  {
+    //Selectors
+    "class": "#ws_vehicleTFG",
+    "tfg_year": "select#ws_vehicleYear",
+    "tfg_make": "select#ws_vehicleMake",
+    "tfg_model": "select#ws_vehicleModel",
+    "tfg_style": "select#ws_vehicleStyle",
+    "tfg_size": "select#ws_vehicleSize",
+    "tfg_type": "select#ws_vehicleType",
+    "tfg_submit": "#ws_vehicleSubmit",
+    "tfg_loading": "#ws_vehicleLoading",
+    "tfg_mini": "#ws_vehicleTFG",
+    //Fitment Objects
+    "checkCookieOnLoad": true,
+    "refine": false,
+    "tf_YearList": new Object(),
+    "tf_MakeList": new Object(),
+    "tf_ModelList": new Object(),
+    "tf_StyleList": new Object(),
+    "tf_SizeList": new Object(),
+    "tf_WidgetSelection": new Object()
+  }
+];
+
+FBSM.TF.GetTFGWrapper = function(currentElement) {
+  for (var wrapperIndex = 0; wrapperIndex < FBSM.TF.tfgWrappers.length; wrapperIndex++) {
+    tfgWrapper = FBSM.TF.tfgWrappers[wrapperIndex];
+    if ($(currentElement).parents(tfgWrapper["class"]).length > 0) {
+      return tfgWrapper;
+    }
+  }
+};
+FBSM.TF.TireFitmentYearSelected = function(tfgWrapper, SelectedYear) {
+  tfgWrapper.tf_WidgetSelection[0] = SelectedYear;
+  $(tfgWrapper.tfg_make).prop("disabled", "");
+  $(tfgWrapper.tfg_make).html("<option value=''>Loading...</option");
+  $.getJSON("/Services/TireFitmentGuide.asmx/GetMakesJScriptJSON?year=" + tfgWrapper.tf_YearList.list[SelectedYear], function(json) {
+    tfgWrapper.tf_MakeList = json;
+    $(tfgWrapper.tfg_make).html("<option value='-1'>Select Make</option");
+    for (i = 0; i < tfgWrapper.tf_MakeList.list.length; i++) $(tfgWrapper.tfg_make).append("<option value='" + i + "'>" + tfgWrapper.tf_MakeList.list[i].Name + "</option>");
+  });
+};
+FBSM.TF.TireFitmentMakeSelected = function(tfgWrapper, SelectedMake) {
+  var SelectedYear = tfgWrapper.tf_WidgetSelection[0];
+  tfgWrapper.tf_WidgetSelection[1] = SelectedMake;
+  $(tfgWrapper.tfg_model).prop("disabled", "");
+  $(tfgWrapper.tfg_model).html("<option value=''>Loading...</option");
+  $.getJSON("/Services/TireFitmentGuide.asmx/GetModelJScriptJSON?makeId=" + tfgWrapper.tf_MakeList.list[SelectedMake].Value + "&year=" + tfgWrapper.tf_YearList.list[SelectedYear], function(json) {
+    tfgWrapper.tf_ModelList = json;
+    $(tfgWrapper.tfg_model).html("<option value='-1'>Select Model</option");
+    for (i = 0; i < tfgWrapper.tf_ModelList.list.length; i++) $(tfgWrapper.tfg_model).append("<option value='" + i + "'>" + tfgWrapper.tf_ModelList.list[i].Name + "</option>");
+  });
+};
+FBSM.TF.TireFitmentModelSelected = function(tfgWrapper, SelectedModel) {
+  var SelectedYear = tfgWrapper.tf_WidgetSelection[0];
+  var SelectedMake = tfgWrapper.tf_WidgetSelection[1];
+  tfgWrapper.tf_WidgetSelection[2] = SelectedModel;
+  $(tfgWrapper.tfg_style).prop("disabled", "");
+  $(tfgWrapper.tfg_style).html("<option value=''>Loading...</option");
+  $.getJSON("/Services/TireFitmentGuide.asmx/GetStylesJScriptJSON?modelId=" + tfgWrapper.tf_ModelList.list[SelectedModel].Value + "&makeId=" + tfgWrapper.tf_MakeList.list[SelectedMake].Value + "&year=" + tfgWrapper.tf_YearList.list[SelectedYear], function(json) {
+    tfgWrapper.tf_StyleList = json;
+    $(tfgWrapper.tfg_style).html("<option value='-1'>Select Style</option");
+    for (i = 0; i < tfgWrapper.tf_StyleList.list.length; i++) $(tfgWrapper.tfg_style).append("<option value='" + i + "'>" + tfgWrapper.tf_StyleList.list[i].Name + "</option>");
+  });
+};
+FBSM.TF.TireFitmentStyleSelected = function(tfgWrapper, SelectedStyle) {
+  var SelectedYear = tfgWrapper.tf_WidgetSelection[0];
+  var SelectedMake = tfgWrapper.tf_WidgetSelection[1];
+  var SelectedModel = tfgWrapper.tf_WidgetSelection[2];
+  tfgWrapper.tf_WidgetSelection[3] = SelectedStyle;
+  if ($(tfgWrapper.tfg_size).length > 0) {
+    $(tfgWrapper.tfg_size).prop("disabled", "");
+    $(tfgWrapper.tfg_size).html("<option value=''>Loading...</option");
+    $.getJSON("/Services/TireFitmentGuide.asmx/GetSizesJScriptJSON?styleId=" + tfgWrapper.tf_StyleList.list[SelectedStyle].Value + "&modelId=" + tfgWrapper.tf_ModelList.list[SelectedModel].Value + "&makeId=" + tfgWrapper.tf_MakeList.list[SelectedMake].Value + "&year=" + tfgWrapper.tf_YearList.list[SelectedYear], function(json) {
+      tfgWrapper.tf_SizeList = json;
+      $(tfgWrapper.tfg_size).html("<option value='-1'>Select Size</option");
+      for (i = 0; i < tfgWrapper.tf_SizeList.list.length; i++) $(tfgWrapper.tfg_size).append("<option value='" + i + "'>" + tfgWrapper.tf_SizeList.list[i].Name + "</option>");
+    });
+  } else {
+    $(tfgWrapper.tfg_submit).prop("disabled", "");
+  }
+};
+FBSM.TF.TireFitmentSizeSelected = function(tfgWrapper, SelectedSize) {
+  tfgWrapper.tf_WidgetSelection[4] = SelectedSize;
+  $(tfgWrapper.tfg_submit).prop("disabled", "");
+};
+FBSM.TF.InitExistingTireFitmentWidget = function(tfgWrapper, PreviousFitmentSelection, PreviousFitmentDesc, PreviousVehicleSearches) {
+  $(tfgWrapper.tfg_loading).show();
+  var previousFitDescArray = [];
+  if (PreviousFitmentSelection) {
+    var previousFitmentArray = PreviousFitmentSelection.split('~');
+    for (i = 0; i <= 5; i++) tfgWrapper.tf_WidgetSelection[i] = previousFitmentArray[i];
+  } else if (PreviousFitmentDesc) {
+    previousFitDescArray = PreviousFitmentDesc.split('|');
+    tfgWrapper.tf_WidgetSelection = [-1, -1, -1, -1, -1];
+  }
+
+  $.getJSON("/Services/TireFitmentGuide.asmx/GetYearsJScriptJSON", function(json) {
+    tfgWrapper.tf_YearList = json;
+    if (tfgWrapper.tf_YearList.list.length > 0) {
+      if (tfgWrapper.tf_WidgetSelection[0] == -1) {
+        if (previousFitDescArray.length > 0) {
+          tfgWrapper.tf_WidgetSelection[0] = $.inArray(previousFitDescArray[0], tfgWrapper.tf_YearList.list);
+        }
+      }
+      if (tfgWrapper.tf_WidgetSelection[0] != -1) {
+        var selectedValue = tfgWrapper.tf_YearList.list[tfgWrapper.tf_WidgetSelection[0]];
+        var urlParams = "year=" + selectedValue;
+        $(tfgWrapper.tfg_year).html("<option value='-1'>Select Year</option");
+        for (i = 0; i < tfgWrapper.tf_YearList.list.length; i++) $(tfgWrapper.tfg_year).append("<option value='" + i + "'" + (tfgWrapper.tf_YearList.list[i] == selectedValue ? " selected" : "") + ">" + tfgWrapper.tf_YearList.list[i] + "</option>");
+      }
+    }
+    $.getJSON("/Services/TireFitmentGuide.asmx/GetMakesJScriptJSON?" + urlParams, function(json) {
+      tfgWrapper.tf_MakeList = json;
+      if (tfgWrapper.tf_MakeList && tfgWrapper.tf_MakeList.list.length > 0) {
+        if (tfgWrapper.tf_WidgetSelection[1] == -1 && previousFitDescArray.length > 1) {
+          tfgWrapper.tf_WidgetSelection[1] = FBSM.TF.FindIndex(tfgWrapper.tf_MakeList.list, previousFitDescArray[1]);
+        }
+        if (tfgWrapper.tf_WidgetSelection[1] != -1) {
+          selectedValue = tfgWrapper.tf_MakeList.list[tfgWrapper.tf_WidgetSelection[1]].Value;
+          urlParams = "makeId=" + selectedValue + "&" + urlParams;
+          $(tfgWrapper.tfg_make).html("<option value='-1'>Select Make</option");
+          for (i = 0; i < tfgWrapper.tf_MakeList.list.length; i++) $(tfgWrapper.tfg_make).append("<option value='" + i + "'" + (tfgWrapper.tf_MakeList.list[i].Value == selectedValue ? " selected" : "") + ">" + tfgWrapper.tf_MakeList.list[i].Name + "</option>");
+        }
+      }
+      $.getJSON("/Services/TireFitmentGuide.asmx/GetModelJScriptJSON?" + urlParams, function(json) {
+        tfgWrapper.tf_ModelList = json;
+        if (tfgWrapper.tf_MakeList && tfgWrapper.tf_ModelList.list.length > 0) {
+          if (tfgWrapper.tf_WidgetSelection[2] == -1 && previousFitDescArray.length > 2) {
+            tfgWrapper.tf_WidgetSelection[2] = FBSM.TF.FindIndex(tfgWrapper.tf_ModelList.list, previousFitDescArray[2]);
+          }
+          if (tfgWrapper.tf_WidgetSelection[2] != -1) {
+            selectedValue = tfgWrapper.tf_ModelList.list[tfgWrapper.tf_WidgetSelection[2]].Value;
+            urlParams = "modelId=" + selectedValue + "&" + urlParams;
+            $(tfgWrapper.tfg_model).html("<option value='-1'>Select Model</option");
+            for (i = 0; i < tfgWrapper.tf_ModelList.list.length; i++) $(tfgWrapper.tfg_model).append("<option value='" + i + "'" + (tfgWrapper.tf_ModelList.list[i].Value == selectedValue ? " selected" : "") + ">" + tfgWrapper.tf_ModelList.list[i].Name + "</option>");
+          }
+        }
+        $.getJSON("/Services/TireFitmentGuide.asmx/GetStylesJScriptJSON?" + urlParams, function(json) {
+          tfgWrapper.tf_StyleList = json;
+          if (tfgWrapper.tf_MakeList && tfgWrapper.tf_StyleList.list.length > 0) {
+            if (tfgWrapper.tf_WidgetSelection[3] == -1 && previousFitDescArray.length > 3) {
+              tfgWrapper.tf_WidgetSelection[3] = FBSM.TF.FindIndex(tfgWrapper.tf_StyleList.list, previousFitDescArray[3]);
+
+              FBSM.TF.SetWidgetCookie(tfgWrapper);
+            }
+            if (tfgWrapper.tf_WidgetSelection[3] != -1) {
+              selectedValue = tfgWrapper.tf_StyleList.list[tfgWrapper.tf_WidgetSelection[3]].Value;
+              urlParams = "styleId=" + selectedValue + "&" + urlParams;
+              $(tfgWrapper.tfg_style).html("<option value='-1'>Select Style</option");
+              for (i = 0; i < tfgWrapper.tf_StyleList.list.length; i++) $(tfgWrapper.tfg_style).append("<option value='" + i + "'" + (tfgWrapper.tf_StyleList.list[i].Value == selectedValue ? " selected" : "") + ">" + tfgWrapper.tf_StyleList.list[i].Name + "</option>");
+            }
+          }
+          $.getJSON("/Services/TireFitmentGuide.asmx/GetSizesJScriptJSON?" + urlParams, function(json) {
+            tfgWrapper.tf_SizeList = json;
+            if (tfgWrapper.tf_MakeList && tfgWrapper.tf_SizeList.list.length > 0 && tfgWrapper.tf_WidgetSelection[4] != -1) {
+              selectedValue = tfgWrapper.tf_SizeList.list[tfgWrapper.tf_WidgetSelection[4]].Value;
+              $(tfgWrapper.tfg_size).html("<option value='-1'>Select Size</option");
+              for (i = 0; i < tfgWrapper.tf_SizeList.list.length; i++) $(tfgWrapper.tfg_size).append("<option value='" + i + "'" + (tfgWrapper.tf_SizeList.list[i].Value == selectedValue ? " selected" : "") + ">" + tfgWrapper.tf_SizeList.list[i].Name + "</option>");
+            }
+
+            $(tfgWrapper.tfg_year + "," + tfgWrapper.tfg_make + "," + tfgWrapper.tfg_model + "," + tfgWrapper.tfg_style + "," + tfgWrapper.tfg_size + "," + tfgWrapper.tfg_submit).prop("disabled", "");
+            if ($(tfgWrapper.tfg_type).length > 0) {
+              $(tfgWrapper.tfg_type).val(tfgWrapper.tf_WidgetSelection[5]);
+            }
+          });
+        });
+      });
+    });
+  });
+};
+FBSM.TF.FindIndex = function(array, name) {
+  var i;
+  for (i = 0; i < array.length; i++) {
+    if (array[i].Name == name) return i;
+  }
+  return -1;
+};
+FBSM.TF.SetWidgetCookie = function(tfWrapper) {
+  var widgetFitmentSelection = new String();
+  tfWrapper.tf_WidgetSelection[5] = $(tfWrapper.tfg_type).length > 0 ? $(tfWrapper.tfg_type).val() : "All";
+  for (i = 0; i <= 5; i++) {
+    if (typeof tfWrapper.tf_WidgetSelection[i] != "undefined") {
+      widgetFitmentSelection += tfWrapper.tf_WidgetSelection[i] + '~';
+    }
+  }
+  $.cookies.set("selectedTireFitmentRight", widgetFitmentSelection);
+};
+FBSM.TF.InitTireFitmentWidget = function(tfgWrapper) {
+  $(tfgWrapper.tfg_year).prop("disabled", "").html("<option value=''>Loading...</option");
+  $.getJSON("/Services/TireFitmentGuide.asmx/GetYearsJScriptJSON", function(json) {
+    tfgWrapper.tf_YearList = json;
+    $(tfgWrapper.tfg_year).html("<option value='-1'>Select Year</option");
+    for (i = 0; i < tfgWrapper.tf_YearList.list.length; i++) $(tfgWrapper.tfg_year).append("<option value='" + i + "'>" + tfgWrapper.tf_YearList.list[i] + "</option>");
+  });
+};
+FBSM.TF.Init = function(tfgWrapper) {
+  if ($(tfgWrapper["class"]).length > 0) {
+    var selectedTireFitmentRight = $.cookies.get("selectedTireFitmentRight");
+    var selectedTFGDescription = $.cookies.get("selectedTFGDescription");
+    var previousVehicleSearches = $.cookies.get("previousVehicleSearches");
+    if (tfgWrapper.checkCookieOnLoad && (selectedTireFitmentRight || selectedTFGDescription || previousVehicleSearches)) {
+      FBSM.TF.InitExistingTireFitmentWidget(tfgWrapper, selectedTireFitmentRight, selectedTFGDescription, previousVehicleSearches);
+    } else {
+      FBSM.TF.InitTireFitmentWidget(tfgWrapper);
+    }
+    FBSM.TF.RenderPreviousFitments(previousVehicleSearches);
+
+    //Event handlers
+    $(tfgWrapper.tfg_year).change(function() {
+      var tfWrapper = FBSM.TF.GetTFGWrapper(this);
+      $(tfWrapper.tfg_make + "," + tfWrapper.tfg_style + "," + tfWrapper.tfg_size + "," + tfWrapper.tfg_model).html('');
+      $(tfWrapper.tfg_make + "," + tfWrapper.tfg_style + "," + tfWrapper.tfg_size + "," + tfWrapper.tfg_model + "," + tfWrapper.tfg_submit).prop("disabled", true);
+      if ($(this).val() != -1) FBSM.TF.TireFitmentYearSelected(tfWrapper, $(this).val());
+    });
+    $(tfgWrapper.tfg_make).change(function() {
+      var tfWrapper = FBSM.TF.GetTFGWrapper(this);
+      $(tfWrapper.tfg_style + "," + tfWrapper.tfg_size + "," + tfWrapper.tfg_model).html('');
+      $(tfWrapper.tfg_style + "," + tfWrapper.tfg_size + "," + tfWrapper.tfg_model + "," + tfWrapper.tfg_submit).prop("disabled", true);
+      if ($(this).val() != -1) FBSM.TF.TireFitmentMakeSelected(tfWrapper, $(this).val());
+    });
+    $(tfgWrapper.tfg_model).change(function() {
+      var tfWrapper = FBSM.TF.GetTFGWrapper(this);
+      $(tfWrapper.tfg_style + "," + tfWrapper.tfg_size).html('');
+      $(tfWrapper.tfg_style + "," + tfWrapper.tfg_size + "," + tfWrapper.tfg_submit).prop("disabled", true);
+      if ($(this).val() != -1) FBSM.TF.TireFitmentModelSelected(tfWrapper, $(this).val());
+    });
+    $(tfgWrapper.tfg_style).change(function() {
+      var tfWrapper = FBSM.TF.GetTFGWrapper(this);
+      $(tfWrapper.tfg_size).html('');
+      $(tfWrapper.tfg_size + "," + tfWrapper.tfg_submit).prop("disabled", true);
+      if ($(this).val() != -1) FBSM.TF.TireFitmentStyleSelected(tfWrapper, $(this).val());
+    });
+    $(tfgWrapper.tfg_size).change(function() {
+      var tfWrapper = FBSM.TF.GetTFGWrapper(this);
+      $(tfWrapper.tfg_submit).prop("disabled", true);
+      if ($(this).val() != -1) FBSM.TF.TireFitmentSizeSelected(tfWrapper, $(this).val());
+    });
+    $(tfgWrapper.tfg_submit).click(function() {
+      var tfWrapper = FBSM.TF.GetTFGWrapper(this);
+
+      FBSM.TF.SetWidgetCookie(tfWrapper);
+      var tfgDescription = "";
+      $("select[id!='vehiclesSearched']:not([id$=clone]) option:selected", tfWrapper.tfg_mini).each(function() {
+        if (tfgDescription != "") tfgDescription += "|";
+        tfgDescription += $(this).html();
+      });
+      $.cookies.set("selectedTFGDescription", tfgDescription);
+      //Verify size exists before trying to use it
+      if ($(tfWrapper.tfg_size).length > 0) {
+        window.location = 'TireFitmentProductList.htm?sizeId=' + tfWrapper.tf_SizeList.list[tfWrapper.tf_WidgetSelection[4]].SizeId;
+      } else {
+        //tstaazz
+        FBSM.EZ.getUpdatedSearchUrl("searchresults.htm", "fitaa", tfWrapper.tf_StyleList.list[tfWrapper.tf_WidgetSelection[3]].Value, "tsaa", tfWrapper.refine, $(tfWrapper.tfg_type).val() === "Wheels", function(url) {
+          if (url) {
+            var tfType = { "Tires": 153, "Wheels": 168 };
+            var selectedTfType = "Tires";
+            if ($(tfWrapper.tfg_type).length > 0 && $(tfWrapper.tfg_type).val() != "All" && typeof (tfType[$(tfWrapper.tfg_type).val()]) != "undefined") {
+              url = url.replace("~", "") + "tftaa" + tfType[$(tfWrapper.tfg_type).val()] + "zz~";
+              selectedTfType = $(tfWrapper.tfg_type).val();
+            }
+
+            if (window.location.href.toLowerCase().indexOf("searchresults.htm") < 0) {
+              // This gets called when the instant search results page loads.
+              FBSM.TF.PreviousFitments(tfgDescription, url);
+            }
+
+            if (FBSM.hasES) {
+              if (url.indexOf("tsaaw") > -1) {
+                window.location = "s/search/Products";
+              } else {
+                var tireOrWheelFitment = selectedTfType === "Wheels" ? "wheel-fitment" : "tire-fitment/recommended";
+                window.location = "s/search/" + tireOrWheelFitment + "/fitmentid/" + tfWrapper.tf_StyleList.list[tfWrapper.tf_WidgetSelection[3]].Value;
+              }
+            } else {
+              window.location = url;
+            }
+          }
+        });
+      }
+    });
+  }
+};
+FBSM.TF.PreviousFitments = function(tfgDescription, url) {
+  if (tfgDescription.replace(/\|/g, '').trim() !== "") {
+    var previousVehicleSearches = $.cookies.get("previousVehicleSearches");
+    // Do some cleanup...
+    var desc = tfgDescription.replace(/\|/g, ' ');
+    desc = desc.replace(/tires?$|wheels?$|all$/i, '');
+    desc = desc.replace(/&amp;/g, '&');
+    desc = desc.trim();
+    // Remove trademark, registered trademark, and copyright symbols.
+    desc = desc.replace(/\u2122|\u00AE|\u00A9/g, "");
+    var previousVehicleText = previousVehicleSearches;
+    // Separate by a newline because it is unlikely that a tire will have it in its name.
+    if (!previousVehicleSearches || previousVehicleSearches.indexOf(desc) < 0) {
+      previousVehicleText = (previousVehicleSearches ? previousVehicleSearches + '\n' : "") + desc + "|" + url;
+    }
+    if (previousVehicleSearches && previousVehicleText.split('\n').length > 5) {
+      var vehicleArray = previousVehicleText.split('\n');
+      vehicleArray.splice(0, 1);
+      previousVehicleText = vehicleArray.join('\n');
+    }
+    if (!previousVehicleSearches || previousVehicleSearches.indexOf(desc) < 0) {
+      var date = new Date();
+      var weeks = 1;
+      date.setDate(date.getDate() + (weeks * 7));
+      $.cookies.set("previousVehicleSearches", previousVehicleText, { expiresAt: date });
+    }
+
+    FBSM.TF.RenderPreviousFitments(previousVehicleText);
+  }
+};
+FBSM.TF.RenderPreviousFitments = function(PreviousVehicleSearches) {
+  if (PreviousVehicleSearches) {
+    var vehicles = PreviousVehicleSearches.split('\n');
+    if ($("#previousFitments").length === 0) {
+      $("#miniTireFitmentRight").prepend("<div id='previousFitments'></div>");
+      $("#previousFitments").append("<tr class='tireFitmentRightTableHeader'><td>Recently Searched</td></tr>");
+      $("#previousFitments").append("<tr id='previousFitments' class='tireFitmentRightTableSelection'><td><select id='vehiclesSearched' class=''></select></td></tr>");
+      $("#previousFitments").hide();
+    } else {
+      $("#previousFitments").hide();
+      $("#previousFitments").html("<tr class='tireFitmentRightTableHeader'><td>Recently Searched</td></tr>");
+      $("#previousFitments").append("<tr id='previousFitments' class='tireFitmentRightTableSelection'><td><select id='vehiclesSearched' class=''></select></td></tr>");
+    }
+    for (var v = vehicles.length - 1; v >= 0; --v) {
+      var vehicleInfo = vehicles[v].split('|');
+      var vehicleText = vehicleInfo[0];
+      var vehicleUrl = vehicleInfo[1];
+      var exists = false;
+      $("#vehiclesSearched option").each(function() {
+        if ($(this).text() === vehicleText) {
+          exists = true;
+        }
+      });
+      if ($("#vehiclesSearched option").length <= 0 || !exists) {
+        $("#vehiclesSearched").append("<option value='" + vehicleUrl + "'>" + vehicleText + "</option>");
+      }
+    }
+
+    $("#previousFitments").append("<tr><td align='Center'><input type='button' id='tireFitmentSubmitRight_useAboveVehicle' class='tireFitmentSubmit ecomm_addToCartButton' value='Go &gt;'><br><br></td></tr>");
+    $("#previousFitments").append("<tr class='tireFitmentRightTableHeader tireFitmentBySize'><td>or new vehicle search...</td></tr>");
+    $("#tireFitmentSubmitRight_useAboveVehicle").click(function() {
+      window.location = $("#vehiclesSearched option:selected").val();
+    });
+    $("#previousFitments").show();
+  }
+};
+FBSM.WViz.Fitment = function(el) {
+  var apiProxyUrl = "Services/ProxyService.aspx",
+    apiBase = FBSM.visualizerEndPoint,
+    apiHost = FBSM.visualizerHost,
+    widget,
+    searchButton,
+    selectors = {},
+    fitmentStatus = {},
+    fitmentId = null,
+    currentSegment = 0,
+    fitmentSegments = [
+      'years',
+      'makes',
+      'models',
+      'styles'
+    ];
+
+  function init() {
+    widget = $(el);
+    if (widget.length) {
+      searchButton = widget.find('.wheel-fitment-submit');
+      $.each(fitmentSegments, function(i, key) {
+        selectors[key] = widget.find('.' + key + '-select');
+        selectors[key].on('change', onDropdownChange(key));
+      });
+      searchButton.on('click', onSearch);
+      trackFitmentStatus();
+    }
+  }
+
+  function setWheelFitmentCookie() {
+    $.cookies.set('wsVehicle', fitmentStatus);
+  }
+
+  function getWheelFitmentCookie() {
+    return $.cookies.get('wsVehicle');
+  }
+
+  function applyCookiedFitment(cookie) {
+  }
+
+  function getCurrentSegment() {
+    return fitmentSegments[currentSegment];
+  }
+
+  function setCurrentSegment(segment, i) {
+    if (segment && segment.length) {
+      var index = fitmentSegments.indexOf(segment);
+      currentSegment = i ? index + i : index;
+    }
+  }
+
+  // loop over fitment order, and keep the select lists in sync
+  function trackFitmentStatus() {
+    var requests = [];
+    $.each(fitmentSegments, function(i, segment) {
+      if (i === currentSegment) {
+        var data = (i > 0) ? fitmentStatus : void 0;
+        var req = requestFactory(segment, data).done(populateDropdown(segment));
+        requests.push(req);
+        selectors[segment]
+          .prop('disabled', false)
+          .empty()
+          .append('<option value="-1">loading...</option>');
+      } else if (i > currentSegment) {
+        delete fitmentStatus[segment.slice(0, -1) + 'Id'];
+        selectors[segment]
+          .empty()
+          .prop('disabled', true);
+      }
+    });
+    // disable the button if we don't have fitment
+    if (currentSegment === fitmentSegments.length) {
+      searchButton.prop('disabled', false);
+    } else {
+      searchButton.prop('disabled', true);
+    }
+
+    var cookie = getWheelFitmentCookie();
+    if (cookie) {
+      applyCookiedFitment(cookie);
+    }
+
+    return requests;
+  }
+
+  // transform data into DOM
+  function populateDropdown(segment) {
+    var selector = selectors[segment];
+    // returns an event handler that is preconfigured
+    // for the given segment
+    return function(data) {
+      if (data && data.length) {
+        var segmentTitle = ucFirst(segment.slice(0, -1));
+        var items = '<option value="-1">Select ' + segmentTitle + '</option>';
+        $.each(data, function(i, val) {
+          var label;
+          var value;
+          if ($.isPlainObject(val)) {
+            label = val.name;
+            value = val.fitmentId ? val.fitmentId : val.id;
+          } else {
+            label = value = val;
+          }
+          items += '<option value="' + value + '">' + label + '</option>';
+        });
+        selector.html(items);
+      }
+    };
+  }
+
+  function onSearch(e) {
+    if (fitmentStatus == null) {
+      alert("There was a problem retrieving fitment for your vehicle.");
+      return false;
+    }
+    if (fitmentStatus.styleId) fitmentId = fitmentStatus.styleId;
+    setWheelFitmentCookie();
+    location.href = 'searchresults.htm?q=fitaa' + fitmentId + 'zzwsaa1zz~';
+  }
+
+  function getSegmentId(segment) {
+    return segment.slice(0, -1) + (segment === 'years' ? '' : 'Id');
+  }
+
+  function onDropdownChange(segment) {
+    return function(e) {
+      var dropdown = $(this),
+        selected = dropdown.val();
+      if (selected.length && selected != -1) {
+        fitmentStatus[getSegmentId(segment)] = selected;
+        setCurrentSegment(segment, 1);
+        _(fitmentSegments).each(function(seg, k) {
+          if (k + 1 > currentSegment) {
+            delete fitmentStatus[getSegmentId(seg)];
+          }
+        });
+        dropdown.data('reqres', trackFitmentStatus());
+      } else {
+        delete fitmentStatus[segment];
+      }
+    };
+  }
+
+  // Makes a request for the given fitment segment,
+  // then augments the response to give a POJO.
+  function requestFactory(segment, reqParams) {
+    return $.ajax({
+      url: apiProxyUrl,
+      type: "POST",
+      data: $.extend({
+        host: apiHost,
+        endPoint: apiBase + '/' + ucFirst(segment),
+        method: reqParams ? "POST" : "GET"
+      }, reqParams)
+    }).then(function(response) {
+      if (response && response[segment] && response[segment].length) {
+        return response[segment];
+      } else if (response && response.message) {
+        FBSM.log('Studio API: ', response.message);
+        return null;
+      } else {
+        FBSM.log('Studio API: No results for ' + segment);
+        return null;
+      }
+    }, function(err) {
+      FBSM.log('Studio API error');
+    });
+  }
+
+  function ucFirst(str) {
+    var s = str.split('')[0].toUpperCase();
+    return s + str.substr(1);
+  }
+
+  init();
+
+  return {
+
+  };
+
+};
+
+FBSM.WViz.Widgets = (function() {
+  var fitments = [];
+  $(function() {
+    $('.wheelfitment').each(function(i, widget) {
+      var data = new FBSM.WViz.Fitment(widget);
+      $(widget).data('widget', data);
+      fitments.push(data);
+    });
+  });
+  return fitments;
+})();
+
+FBSM.C.getServerControl = function(clientName, obj) {
+  if (typeof (obj) != "undefined" && obj != null) {
+    //find parent div of obj
+    var parents = $(obj).parents("div");
+    var maxDepth = 10;
+    if (parents.length > 0) {
+      var control = parents.first().find("[id$='" + clientName + "'],." + clientName);
+      var depth = 0;
+      for (var i = 0; i <= maxDepth && control.length <= 0; ++i) {
+        parents = parents.parents("div");
+        control = parents.find("[id$='" + clientName + "'],." + clientName);
+        ++depth;
+      }
+      return control[0];
+    }
+  }
+  var control = $("[id$='" + clientName + "']");
+  if (control.length > 0) return control[0];
+  return null;
+};
+
+FBSM.C.test_searchByVehicle = function() {
+  var sizes = FBSM.C.getServerControl('lstSizes');
+  if (sizes != null && sizes.selectedValue == "") {
+    alert("Please select a tire size before searching");
+    return false;
+  }
+
+  //Plug the results of this search into the tirefitment sidebar widget. (assuming it's on the site)
+  var widgetFitmentSelection = new String();
+  var controlValue;
+  controlValue = FBSM.C.getServerControl('cmbYear');
+  widgetFitmentSelection += controlValue.selectedIndex - 1 + '~';
+  controlValue = FBSM.C.getServerControl('cmbMake');
+  widgetFitmentSelection += controlValue.selectedIndex - 1 + '~';
+  controlValue = FBSM.C.getServerControl('cmbModel');
+  widgetFitmentSelection += controlValue.selectedIndex - 1 + '~';
+  controlValue = FBSM.C.getServerControl('cmbStyle');
+  widgetFitmentSelection += controlValue.selectedIndex - 1 + '~';
+  controlValue = FBSM.C.getServerControl('lstSizes');
+  widgetFitmentSelection += controlValue.selectedIndex + '~';
+  $.cookies.set("selectedTireFitmentRight", widgetFitmentSelection);
+
+  return true;
+};
+
+FBSM.C.selectOptionValue = function(selectCtrl, value) {
+  if (value != null && value != "") {
+    for (var index = 0; index < selectCtrl.options.length; index++) {
+      if (selectCtrl.options[index].value == value) selectCtrl.selectedIndex = index;
+    }
+  } else {
+    selectCtrl.selectedIndex = 0;
+  }
+};
+
+FBSM.C.bindDictionaryToSelectBox = function(selectbox, dictionary) {
+  for (var index = 0; index < dictionary.length; index++) FBSM.C.addOption(selectbox, dictionary[index].Name, dictionary[index].Value);
+};
+
+FBSM.C.bindListToSelectBox = function(selectbox, list) {
+  for (var index = 0; index < list.length; index++) FBSM.C.addOption(selectbox, list[index], list[index]);
+};
+
+FBSM.C.addOption = function(selectbox, text, value) {
+  var optn = document.createElement("OPTION");
+  optn.text = text;
+  optn.value = value;
+  selectbox.options.add(optn);
+};
+FBSM.C.getRequestAQuoteFormFromTFG = function(basePath, manufacturer, model, year, image, productType, industryId, aspect, notAvailable, vehicleYear, vehicleMake, vehicleModel, vehicleStyle, tireSize) {
+  var url = basePath + "popupForms/dynamic/Request.aspx?manufacturer=" + '' + "&model=" + '' + "&year=" + '' + "&image=" + '' + "&productType=" + productType + "&industryId=" + industryId + "&aspect=" + aspect + "&vehicleYear=" + vehicleYear + "&vehicleMake=" + escape(vehicleMake) + "&vehicleModel=" + escape(vehicleModel) + "&vehicleStyle=" + escape(vehicleStyle) + "&tireSize=" + tireSize;
+  if (notAvailable) url += "&productNotAvailable=true";
+  //Set the window size (window automatically centered by this function)
+  var height = 480;
+  var width = 400;
+  var top = parseInt((window.screen.height - height) / 2);
+  var left = parseInt((window.screen.width - width) / 2);
+  window.open(url, "_blank", "location=no,menubar=no,directories=no,toolbar=no,status=yes,resizable=yes,scrollbars=yes,top=" + top + "px,left=" + left + "px,width=" + width + "px,height=" + height + "px");
+};
+FBSM.C.getSelectedValue = function(select) {
+  return (select.value == undefined) ? select.options[select.selectedIndex].value : select.value;
+};
+
+FBSM.C.getSelectedText = function(select) {
+  return (select.text == undefined) ? select.options[select.selectedIndex].text : select.text;
+};
+FBSM.C.test_searchByKnownSize = function() {
+  var width = FBSM.C.getServerControl('cmbWidth');
+  var height = FBSM.C.getServerControl('cmbHeight');
+  var diameter = FBSM.C.getServerControl('cmbDiameter');
+  if ((width != null && height != null && diameter != null) && (width.value == "0" || diameter.value == "0")) {
+    alert("Please select a tire size before searching");
+    return false;
+  }
+  return true;
+};
+
+FBSM.C.getTFGTireSizeAtIndex = function(index) {
+  var width = FBSM.C.getServerControl('cmbWidth');
+  if (width != null && FBSM.C.tireFitmentGuideTireSizeInfo != null && FBSM.C.tireFitmentGuideTireSizeInfo.length > index) {
+    FBSM.C.tireFitmentGuideTireSizeInfoIndex = index;
+    FBSM.C.selectOptionValue(width, FBSM.C.tireFitmentGuideTireSizeInfo[index].Width);
+    FBSM.C.requestHeights(width);
+  }
+};
+
+FBSM.C.handleTFGHeightSelectResponse = function(tfgData, selectbox) {
+  var diameters = FBSM.C.getServerControl('cmbDiameter', selectbox);
+  diameters.options.length = 0;
+  FBSM.C.bindListToSelectBox(diameters, tfgData.list);
+  diameters.disabled = false;
+  if (diameters != null && FBSM.C.tireFitmentGuideTireSizeInfo != null && FBSM.C.tireFitmentGuideTireSizeInfo.length > FBSM.C.tireFitmentGuideTireSizeInfoIndex) {
+    FBSM.C.selectOptionValue(diameters, FBSM.C.tireFitmentGuideTireSizeInfo[FBSM.C.tireFitmentGuideTireSizeInfoIndex].Diameter);
+  }
+};
+FBSM.C.handleTFGWidthSelectResponse = function(tfgData, selectbox) {
+  if (tfgData != null) {
+    var heights = FBSM.C.getServerControl('cmbHeight', selectbox);
+    heights.options.length = 0;
+    FBSM.C.bindListToSelectBox(heights, tfgData.list);
+    heights.disabled = false;
+    if (heights != null && FBSM.C.tireFitmentGuideTireSizeInfo != null && FBSM.C.tireFitmentGuideTireSizeInfo.length > FBSM.C.tireFitmentGuideTireSizeInfoIndex) {
+      FBSM.C.selectOptionValue(heights, FBSM.C.tireFitmentGuideTireSizeInfo[FBSM.C.tireFitmentGuideTireSizeInfoIndex].Height);
+    }
+    FBSM.C.requestDiameters(heights);
+    var submit = FBSM.C.getServerControl('btnSearchByKnownSize', selectbox);
+    submit.disabled = (tfgData != null) ? false : true;
+  }
+};
+
+FBSM.C.setToLoadingSelectBox = function(selectbox, loading) {
+  selectbox.options.length = 0;
+  if (loading) FBSM.C.addOption(selectbox, "Loading...", "0");
+  selectbox.disabled = true;
+};
+
+FBSM.C.pauseDiameters = function(loading, selectbox) {
+  FBSM.C.setToLoadingSelectBox(FBSM.C.getServerControl('cmbDiameter', selectbox), loading);
+  var btnSubmit = FBSM.C.getServerControl('btnSearchByKnownSize', selectbox);
+};
+FBSM.C.pauseHeights = function(loading, selectbox) {
+  FBSM.C.setToLoadingSelectBox(FBSM.C.getServerControl('cmbHeight', selectbox), loading);
+  FBSM.C.pauseDiameters(false, selectbox);
+};
+FBSM.C.pauseMakes = function(loading) {
+  FBSM.C.setToLoadingSelectBox(FBSM.C.getServerControl('cmbMake'), loading);
+  FBSM.C.pauseModels(false);
+};
+FBSM.C.pauseModels = function(loading) {
+  FBSM.C.setToLoadingSelectBox(FBSM.C.getServerControl('cmbModel'), loading);
+  FBSM.C.pauseStyles(false);
+};
+FBSM.C.pauseSizes = function(loading) {
+  FBSM.C.setToLoadingSelectBox(FBSM.C.getServerControl('lstSizes'), loading);
+  var submit = FBSM.C.getServerControl('btnSearchByVehicle');
+  if (submit) submit.disabled = true;
+};
+FBSM.C.pauseStyles = function(loading) {
+  FBSM.C.setToLoadingSelectBox(FBSM.C.getServerControl('cmbStyle'), loading);
+  FBSM.C.pauseSizes(false);
+};
+
+FBSM.C.requestDiameters = function(selectbox) {
+  FBSM.C.pauseDiameters(true, selectbox);
+  // Send Request
+  if (selectbox.Value != "") {
+    $.ajax({
+      type: "POST",
+      url: "services/TireFitmentGuide.asmx/GetTireDiametersJSON",
+      data: "width=" + FBSM.C.getSelectedValue(FBSM.C.getServerControl('cmbWidth', selectbox)) + '&height=' + FBSM.C.getSelectedValue(selectbox),
+      dataType: "json",
+      contentType: "application/x-www-form-urlencoded",
+      success: function(response) {
+        FBSM.C.handleTFGHeightSelectResponse(response, selectbox);
+      }
+    });
+  } else {
+    FBSM.C.handleTFGHeightSelectResponse(null, selectbox);
+  }
+};
+FBSM.C.requestHeights = function(selectbox) {
+  FBSM.C.pauseHeights(true, selectbox);
+  if (selectbox.Value != "") {
+    $.ajax({
+      type: "POST",
+      url: "services/TireFitmentGuide.asmx/GetTireHeightsJSON",
+      data: "width=" + FBSM.C.getSelectedValue(selectbox),
+      dataType: "json",
+      contentType: "application/x-www-form-urlencoded",
+      success: function(response) {
+        FBSM.C.handleTFGWidthSelectResponse(response, selectbox);
+      }
+    });
+  } else {
+    FBSM.C.handleTFGWidthSelectResponse(null, selectbox);
+  }
+};
+FBSM.C.requestSearchResults = function(selectbox) {
+  FBSM.C.pauseSizes(true);
+  $.ajax({
+    type: "POST",
+    url: "services/TireFitmentGuide.asmx/GetTireSizesJSON",
+    data: "styleId=" + FBSM.C.getSelectedValue(selectbox) + "&styleValue=" + FBSM.C.getSelectedText(selectbox),
+    dataType: "json",
+    contentType: "application/x-www-form-urlencoded",
+    success: function(tfgData) {
+      FBSM.C.tireFitmentGuideTireSizeInfo = tfgData.list;
+      var sizes = FBSM.C.getServerControl('lstSizes');
+      sizes.options.length = 0;
+      FBSM.C.bindDictionaryToSelectBox(sizes, tfgData.list);
+      if (sizes.length > 0) {
+        sizes.selectedIndex = 0;
+        FBSM.C.getTFGTireSizeAtIndex(0);
+        FBSM.C.requestSubmitUrl(sizes);
+      }
+      sizes.disabled = false;
+    }
+  });
+};
+FBSM.C.requestSubmitUrl = function(selectbox) {
+  var submit = FBSM.C.getServerControl('btnSearchByVehicle');
+  if (submit) {
+    submit.disabled = false;
+  } else {
+    submit = FBSM.C.getServerControl('btnRequestAQuote');
+    if (submit) {
+      var yearBox = FBSM.C.getServerControl('cmbYear');
+      var year = (yearBox) ? FBSM.C.getSelectedText(yearBox) : '';
+      var makeBox = FBSM.C.getServerControl('cmbMake');
+      var make = (makeBox) ? FBSM.C.getSelectedText(makeBox) : '';
+      var modelBox = FBSM.C.getServerControl('cmbModel');
+      var model = (modelBox) ? FBSM.C.getSelectedText(modelBox) : '';
+      var styleBox = FBSM.C.getServerControl('cmbStyle');
+      var style = (styleBox) ? FBSM.C.getSelectedText(styleBox) : '';
+      var styleId = (styleBox) ? FBSM.C.getSelectedValue(styleBox) : '';
+      var size = FBSM.C.getSelectedValue(selectbox);
+      // Send Request
+      if ($("#raqs_body").length > 0) {
+        submit.disabled = false;
+        $("#rq_txtTireSize").val(size);
+        $("#rq_txtVehicleYear").val(year);
+        $("#rq_txtVehicleMake").val(make);
+        $("#rq_txtVehicleModel").val(model);
+        $("#rq_txtVehicleStyle").val(style);
+      } else {
+        submit.disabled = true;
+        $.ajax({
+          type: "POST",
+          url: "services/TireFitmentGuide.asmx/GetSubmitUrl",
+          data: "productListPage=TireFitmentProductList.htm&styleId=" + styleId + "&size=" + size + "&year=" + year + "&make=" + escape(make) + "&model=" + escape(model) + "&style=" + escape(style),
+          dataType: "xml",
+          contentType: "application/x-www-form-urlencoded",
+          success: function(responseXML) {
+            var submit = FBSM.C.getServerControl('btnRequestAQuote');
+            if (responseXML && submit) {
+              submit.disabled = false;
+              eval(responseXML.documentElement.firstChild.nodeValue);
+            }
+          }
+        });
+      }
+    }
+  }
+};
+FBSM.C.requestVehicleMakes = function(selectbox) {
+  FBSM.C.pauseMakes(true);
+  $.ajax({
+    type: "POST",
+    url: "services/TireFitmentGuide.asmx/GetMakesJSON",
+    data: "year=" + FBSM.C.getSelectedValue(selectbox),
+    dataType: "json",
+    contentType: "application/x-www-form-urlencoded",
+    success: function(tfgData) {
+      var makes = FBSM.C.getServerControl('cmbMake');
+      makes.options.length = 0;
+      FBSM.C.addOption(makes, 'Pick a Make', '0');
+      FBSM.C.bindDictionaryToSelectBox(makes, tfgData.list);
+      makes.disabled = false;
+    }
+  });
+};
+
+FBSM.C.requestVehicleModels = function(selectbox) {
+  FBSM.C.pauseModels(true);
+  $.ajax({
+    type: "POST",
+    url: "services/TireFitmentGuide.asmx/GetModelsJSON",
+    data: "makeId=" + FBSM.C.getSelectedValue(selectbox) + "&makeValue=" + FBSM.C.getSelectedText(selectbox),
+    dataType: "json",
+    contentType: "application/x-www-form-urlencoded",
+    success: function(tfgData) {
+      var models = FBSM.C.getServerControl('cmbModel');
+      models.options.length = 0;
+      FBSM.C.addOption(models, 'Pick a Model', '0');
+      FBSM.C.bindDictionaryToSelectBox(models, tfgData.list);
+      models.disabled = false;
+    }
+  });
+};
+FBSM.C.requestVehicleStyles = function(selectbox) {
+  FBSM.C.pauseStyles(true);
+  $.ajax({
+    type: "POST",
+    url: "services/TireFitmentGuide.asmx/GetStylesJSON",
+    data: "modelId=" + FBSM.C.getSelectedValue(selectbox) + "&modelValue=" + FBSM.C.getSelectedText(selectbox),
+    dataType: "json",
+    contentType: "application/x-www-form-urlencoded",
+    success: function(tfgData) {
+      var styles = FBSM.C.getServerControl('cmbStyle');
+      styles.options.length = 0;
+      FBSM.C.addOption(styles, 'Pick a Style', '0');
+      FBSM.C.bindDictionaryToSelectBox(styles, tfgData.list);
+      styles.disabled = false;
+    }
+  });
+};
+FBSM.C.resetTFG = function() {
+  var yearBox = $("select[id$=cmbYear]");
+  if (yearBox.length > 0) {
+    yearBox.selectedIndex = 0;
+    $("select[id$=lstSizes]").empty().prop("disabled", true);
+    $("select[id$=cmbMake]").empty().prop("disabled", true);
+    $("select[id$=cmbModel]").empty().prop("disabled", true);
+    $("select[id$=cmbStyle]").empty().prop("disabled", true);
+    $("select[id$=btnSearchByVehicle]").prop("disabled", true);
+  }
+  if ($("select[id$=cmbWidth]").length > 0) {
+    if ($("select[id$=cmbWidth] option").length > 0) {
+      $("select[id$=cmbWidth]").val("135");
+      FBSM.C.requestHeights($("select[id$=cmbWidth]")[0]);
+    } else {
+      $.ajax({
+        type: "GET",
+        url: "services/TireFitmentGuide.asmx/GetTireWidthsJSON",
+        dataType: "json",
+        contentType: "application/x-www-form-urlencoded",
+        success: function(json) {
+          var tf_widths = json;
+          for (i = 0; i < tf_widths.list.length; i++) {
+            $("select[id$=cmbWidth]").append("<option value='" + tf_widths.list[i] + "'>" + tf_widths.list[i] + "</option>");
+          }
+          $("select[id$=cmbWidth]").val("135");
+          FBSM.C.requestHeights($("select[id$=cmbWidth]")[0]);
+        }
+      });
+    }
+  }
+};
+
+$(document).ready(function() {
+  for (wrapperIndex in FBSM.TF.tfgWrappers) {
+    tfgWrapper = FBSM.TF.tfgWrappers[wrapperIndex];
+    FBSM.TF.Init(tfgWrapper);
+  }
+
+  $(".btnSearchByKnownSize").click(function() {
+    if (FBSM.hasES) {
+      window.location = "s/search/products/attr-tire-size/" + FBSM.C.getServerControl("cmbWidth", this).value + "~~" + FBSM.C.getServerControl("cmbHeight", this).value + "~~" + FBSM.C.getServerControl("cmbDiameter", this).value;
+    } else {
+      var size = "w:" + FBSM.C.getServerControl("cmbWidth", this).value + "|h:" + FBSM.C.getServerControl("cmbHeight", this).value + "|d:" + FBSM.C.getServerControl("cmbDiameter", this).value;
+      $.cookies.del("selectedTireFitmentRight");
+      $.cookies.del("selectedTFGDescription");
+      $.cookies.set("selectedTireFitmentRight", size);
+      $.cookies.set("selectedTFGDescription", size);
+      FBSM.EZ.getUpdatedSearchUrl("searchresults.htm", "tsaa", size, "fitaa", false, false, function(url) {
+        window.location = url;
+      });
+    }
+  });
+  $("#btnSearchByKnownSize").click(function(){
+    $.cookies.del("selectedTireFitmentRight");
+    $.cookies.del("selectedTFGDescription");
+    window.location = FBSM.EZ.getUpdatedSearchUrl("searchresults.htm", "tsaa", "w:" + $("#cmbWidth").val() + "|h:" + $("#cmbHeight").val() + "|d:" + $("#cmbDiameter").val(), "fitaa");
+  });
+  FBSM.C.resetTFG();
+});

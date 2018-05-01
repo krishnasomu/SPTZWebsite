@@ -1,0 +1,109 @@
+FBSM.TFG.wrapperBodyHeight = null;
+FBSM.TFG.showNote = function(name) {
+  var body = $('#' + name + '_body');
+  body.attr("class", 'notevisible');
+  $("#IEFRAMEFIX").show();
+  var scrollToTop = 0;
+  if (typeof (window.innerWidth) == 'number') {
+    scrollToTop = window.pageYOffset;
+  } else if (document.documentElement && (document.documentElement.clientWidth || document.documentElement.clientHeight)) {
+    scrollToTop = document.body.scrollTop;
+    if (scrollToTop == 0) scrollToTop = document.documentElement.scrollTop;
+  } else if (document.body && (document.body.clientWidth || document.body.clientHeight)) {
+    scrollToTop = document.body.scrollTop;
+    if (scrollToTop == 0) scrollToTop = document.documentElement.scrollTop;
+  }
+  if (FBSM.TFG.wrapperBodyHeight == null) FBSM.TFG.wrapperBodyHeight = $("#ecomm_tireFitmentGuide").height();
+  var offsetTop = $("#ecomm_tireFitmentGuide")[0].offsetTop;
+  var topval = (scrollToTop - offsetTop >= 0) ? scrollToTop - offsetTop : 0;
+  var leftval = Math.round(($("#ecomm_tireFitmentGuide")[0].clientWidth / 2) - (body.clientWidth / 2));
+  body.css("top", topval + 30);
+  body.css("left", (leftval > 30) ? leftval : "30");
+  $("#IEFRAMEFIX").css("top", topval + 30);
+  $("#IEFRAMEFIX").css("left", (leftval > 30) ? leftval : "30");
+  $("#IEFRAMEFIX").css("height", body[0].offsetHeight);
+  if (body.attr("id") != "response_body") $("#ecomm_tireFitmentGuide").css("height", (body[0].offsetHeight + (topval + 30)));
+  if ($("#rq_txtFirstName").length > 0) {
+    var rq_offsetWidth = $("#rq_txtFirstName").width() + "px";
+    $("#rq_cmbCountries").css("width", rq_offsetWidth);
+    $("#rq_cmbRegions").css("width", rq_offsetWidth);
+  }
+  if (name == "raqs") FBSM.C.loadCustomJavascriptParameters("tfg_request_quote_start", "o");
+};
+FBSM.TFG.hideNote = function(name) {
+  $("#" + name + "_body").attr("class", 'notehidden');
+  $("#IEFRAMEFIX").hide();
+  $("#ecomm_tireFitmentGuide").css("height", FBSM.TFG.wrapperBodyHeight);
+};
+FBSM.TFG.getRegions_showcase = function(country, caller) {
+  $.ajax({
+    type: "POST",
+    url: "controls/Showcase/Subpage/SinglePage_GetRegions.aspx",
+    data: "country_name=" + country,
+    dataType: 'html',
+    contentType: "application/x-www-form-urlencoded",
+    success: function(response) {
+      var element = $("#" + caller);
+      FBSM.SC.innerHTMLSelectFix(element[0], response);
+      element.css("width", $("#rq_txtFirstName").width());
+    }
+  });
+};
+FBSM.TFG.preValidateForm = function(caller) {
+  var hasErrors = false, EmptyElements = "", element = null;
+  var requiredElements = new Array("rq_txtFirstName", "rq_txtLastName", "rq_txtEmail", "rq_txtConfirmEmail", "rq_txtDayPhone", "rq_txtVehicleYear", "rq_txtVehicleMake", "rq_txtVehicleModel", "rq_txtVehicleStyle", "rq_txtCity", "rq_cmbRegions");
+  var requiredElmNames = new Array("First Name", "Last Name", "Email", "Confirmation Email", "Phone", "Vehicle Year", "Vehicle Manufacturer", "Vehicle Model", "Vehicle Style", "City", "Region");
+  var allElements = new Array("rq_txtFirstName", "rq_txtLastName", "rq_txtEmail", "rq_txtConfirmEmail", "rq_txtDayPhone", "rq_txtEveningPhone", "rq_txtComments", "rq_cmbTimeframeToPurchase", "rq_txtPostalCode", "rq_txtVehicleYear", "rq_txtVehicleMake", "rq_txtVehicleModel", "rq_txtVehicleStyle", "rq_txtTireSize", "rq_txtAddress1", "rq_txtAddress2", "rq_txtCity", "rq_cmbRegions", "rq_cmbCountries", "rq_findWebSite");
+  if ($("span[id$='labelRegion']").html() == "*Region:") requiredElements.push("rq_txtCity", "rq_cmbRegions");
+  if ($("[id$=locationbox]").length > 0) { //if exists, then required
+    if ($("[id$=locationbox]").val() == -1) {
+      EmptyElements += ((EmptyElements != "") ? ", " : "") + "Store Location";
+      hasErrors = true;
+    }
+  }
+  var email = $("#rq_txtEmail");
+  var confirmEmail = $("#rq_txtConfirmEmail");
+  for (i = 0; i < requiredElements.length; i++) {
+    element = $("#" + requiredElements[i]);
+    if (element.val() == "" || element.val() == undefined) {
+      hasErrors = true;
+      EmptyElements += ((EmptyElements != "") ? ", " : "") + requiredElmNames[i];
+    }
+  }
+  if (!hasErrors) {
+    if (email.val().toLowerCase() == confirmEmail.val().toLowerCase()) {
+      var queryString = "rq_productType=new&";
+      $(caller).parents("form").find("input:not(:submit, :button), select, textarea").each(function(i) {
+        if (this.id != "__VIEWSTATE") {
+          if (this.id.indexOf("locationbox") < 0) {
+            queryString += this.id + "=" + ((this.type != "checkbox") ? escape(this.value) : this.checked) + "&";
+          } else {
+            queryString += "rq_cmbLocations=" + escape(this.value) + "&";
+          }
+        }
+      });
+      $.ajax({
+        type: "POST",
+        url: "controls/Showcase/Subpage/SinglePage_SendQuoteRequest.aspx",
+        data: queryString,
+        dataType: 'html',
+        success: function(response) {
+          if (response.substring(0, 2) == "1:") {
+            alert(response.substring(2));
+          } else {
+            FBSM.TFG.hideNote("raqs");
+            $("#response_body_contents").html(response);
+            FBSM.TFG.showNote("response");
+            $("#raqs_body").find(':text, :password, textarea').attr('value', '').end().find(':checkbox, :radio').prop('checked', false).end().find('select[name!="cmbLocations"]').prop('selectedIndex', -1);
+            FBSM.C.loadCustomJavascriptParameters("form_submit", "o");
+            FBSM.C.captchaRefresh("rq_captchaImage");
+          }
+        }
+      });
+    } else {
+      alert("Email addresses do not match, please verify that they are correct and submit the form again.");
+    }
+  } else {
+    alert(EmptyElements + ((EmptyElements.indexOf(",") > -1) ? " are empty. These fields are" : " is empty. This field is") + " required. Please double check your form and submit it again!");
+  }
+};
